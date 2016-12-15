@@ -5,16 +5,16 @@ namespace ValidationPipeline.LogStorage.Controllers
     [Route("api/[controller]")]
     public class LogsController : Controller
     {
-        [HttpGet("{id}")]
-        public string Get(int id)
+        [HttpPost]
+        public IActionResult Upload()
         {
-            return "value";
+            return Ok();
         }
 
-        // POST api/values
-        [HttpPost]
-        public void Post([FromBody]string value)
+        [HttpGet("{id}")]
+        public IActionResult Get(int id)
         {
+            return Ok();
         }
     }
 }
