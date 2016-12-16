@@ -46,17 +46,7 @@ namespace ValidationPipeline.LogStorage.Tests
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
-
-        [Fact]
-        public async Task Upload_FileNameWithoutZipExtension_ReturnsNotFound()
-        {
-            // Act
-            var response = await _client.PutAsync("/api/logs/filename", new StreamContent(Stream.Null));
-
-            // Assert
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        }
-
+        
         [Fact]
         public async Task Upload_EmptyBody_ReturnsBadRequest()
         {
@@ -145,26 +135,30 @@ namespace ValidationPipeline.LogStorage.Tests
         public async Task Upload_ZipFile_ReturnsCreatedWithLogFileInfo()
         {
             // Arrange
-            const string url = "http://something.com";
+            const string innerFileName = "somefile.log";
             _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
             _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(true);
-            _mockArchiveService.GetFileNames(Arg.Any<Stream>())
-                .Returns(new[] {url});
+            _mockArchiveService.GetInnerFileNames(Arg.Any<Stream>())
+                .Returns(new[] { innerFileName });
 
-            const string fileName = "20161215.zip";
-            using (var stream = File.Open($"TestData/{fileName}", FileMode.Open, FileAccess.Read))
+            const string archiveName = "20161215.zip";
+            var route = $"/api/logs/{archiveName}";
+
+            using (var stream = File.Open($"TestData/{archiveName}", FileMode.Open, FileAccess.Read))
             {
                 var streamContent = new StreamContent(stream);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
 
                 // Act
-                var response = await _client.PutAsync($"/api/logs/{fileName}", streamContent);
+                var response = await _client.PutAsync(route, streamContent);
                 var responseString = await response.Content.ReadAsStringAsync();
                 var filesInfo = JsonConvert.DeserializeObject<List<LogFileInfo>>(responseString);
 
                 // Assert
                 Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-                Assert.Single(filesInfo, file => file.Url == url);
+                Assert.Equal(route, response.Headers.Location.PathAndQuery);
+                Assert.Single(filesInfo, file => 
+                    file.Url.EndsWith($"{route}/{innerFileName}"));
             }
         }
 

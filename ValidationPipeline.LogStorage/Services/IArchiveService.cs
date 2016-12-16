@@ -7,7 +7,7 @@ namespace ValidationPipeline.LogStorage.Services
     {
         bool IsValid(Stream archiveStream);
         bool IsEmpty(Stream archiveStream);
-        IEnumerable<string> GetFileNames(Stream archiveStream);
+        IEnumerable<string> GetInnerFileNames(Stream archiveStream);
         Stream ExtractFile(Stream archiveStream, string fileName);
     }
 }

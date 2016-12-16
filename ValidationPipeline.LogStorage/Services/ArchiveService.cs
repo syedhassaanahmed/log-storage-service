@@ -31,7 +31,7 @@ namespace ValidationPipeline.LogStorage.Services
             }
         }
 
-        public IEnumerable<string> GetFileNames(Stream archiveStream)
+        public IEnumerable<string> GetInnerFileNames(Stream archiveStream)
         {
             using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
             {

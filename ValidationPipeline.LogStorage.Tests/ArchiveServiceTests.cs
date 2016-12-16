@@ -86,31 +86,41 @@ namespace ValidationPipeline.LogStorage.Tests
 
         #endregion
 
-        #region GetFileNames
+        #region GetInnerFileNames
 
         [Fact]
-        public void GetFileNames_StreamNull_ThrowsArgumentNullException()
+        public void GetInnerFileNames_StreamNull_ThrowsArgumentNullException()
         {
-            Assert.Throws<ArgumentNullException>(() => _archiveService.GetFileNames(null));
+            Assert.Throws<ArgumentNullException>(() => _archiveService.GetInnerFileNames(null));
         }
 
         [Fact]
-        public void GetFileNames_Stream_RemainsOpen()
+        public void GetInnerFileNames_Stream_RemainsOpen()
         {
             using (var stream = File.Open("TestData/20161215.zip", FileMode.Open, FileAccess.Read))
             {
-                _archiveService.GetFileNames(stream);
+                _archiveService.GetInnerFileNames(stream);
                 Assert.True(stream.CanRead);
             }
         }
 
         [Fact]
-        public void GetFileNames_Stream_ReturnsFileNames()
+        public void GetInnerFileNames_Stream_ReturnsFileNames()
         {
             using (var stream = File.Open("TestData/20161215.zip", FileMode.Open, FileAccess.Read))
             {
-                var result = _archiveService.GetFileNames(stream);
+                var result = _archiveService.GetInnerFileNames(stream);
                 Assert.Equal(3, result.Count());
+            }
+        }
+
+        [Fact]
+        public void GetInnerFileNames_EmptyArchive_ReturnsEmptyCollection()
+        {
+            using (var stream = File.Open("TestData/empty.zip", FileMode.Open, FileAccess.Read))
+            {
+                var result = _archiveService.GetInnerFileNames(stream);
+                Assert.Empty(result);
             }
         }
 
