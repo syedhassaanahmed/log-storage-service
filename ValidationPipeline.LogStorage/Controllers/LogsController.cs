@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
@@ -43,26 +43,39 @@ namespace ValidationPipeline.LogStorage.Controllers
                 return BadRequest();
 
             var innerFileNames = _archiveService.GetInnerFileNames(Request.Body).ToList();
-            var isUploaded = await _storageService.UploadAsync(archiveFileName, 
-                Request.Body, innerFileNames);
-
-            if (!isUploaded)
-                return new StatusCodeResult((int)HttpStatusCode.InternalServerError);
+            await _storageService.UploadAsync(archiveFileName, Request.Body, innerFileNames);
 
             var filesInfo = CreateLogFilesInfo(innerFileNames);
             return Created(Request.GetEncodedUrl(), filesInfo);
         }
 
         [HttpGet("{archiveFileName}")]
-        public IActionResult GetInnerFilesInfo(string archiveFileName, string innerFileName)
+        public async Task<IActionResult> GetInnerFilesInfoAsync(string archiveFileName)
         {
-            return Ok();
+            var exists = await _storageService.ExistsAsync(archiveFileName);
+            if (!exists)
+                return NotFound();
+
+            var innerFileNames = await _storageService.GetInnerFileNamesAsync(archiveFileName);
+            var filesInfo = CreateLogFilesInfo(innerFileNames);
+
+            return Ok(filesInfo);
         }
 
         [HttpGet("{archiveFileName}/{innerFileName}")]
-        public IActionResult GetFile(string archiveFileName, string innerFileName)
+        public async Task<IActionResult> DownloadAsync(string archiveFileName, string innerFileName)
         {
-            return Ok();
+            var exists = await _storageService.ExistsAsync(archiveFileName);
+            if (!exists)
+                return NotFound();
+
+            var archiveStream = await _storageService.DownloadAsync(archiveFileName);
+            var innerFileStream = _archiveService.ExtractInnerFile(archiveStream, innerFileName);
+
+            return new FileStreamResult(innerFileStream, MediaTypeHeaderValue.Parse(ZipContentType))
+            {
+                FileDownloadName = innerFileName
+            };
         }
 
         #endregion

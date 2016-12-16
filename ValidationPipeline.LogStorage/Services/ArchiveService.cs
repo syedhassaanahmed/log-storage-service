@@ -39,7 +39,7 @@ namespace ValidationPipeline.LogStorage.Services
             }
         }
 
-        public Stream ExtractFile(Stream archiveStream, string innerFileName)
+        public Stream ExtractInnerFile(Stream archiveStream, string innerFileName)
         {
             if (string.IsNullOrWhiteSpace(innerFileName))
                 throw new ArgumentNullException(nameof(innerFileName));

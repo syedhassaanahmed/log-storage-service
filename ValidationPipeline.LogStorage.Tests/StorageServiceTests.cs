@@ -53,22 +53,63 @@ namespace ValidationPipeline.LogStorage.Tests
                     await _storageService.UploadAsync("somefile.zip", stream, null));
             }
         }
-        
+
         [Fact]
         public async Task UploadAsync_CorrectArchiveMultipleTimes_IsIdempotent()
         {
+            const string archiveFileName = "somefile.zip";
+
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 for (var i = 0; i < 10; i++)
                 {
                     // Act
-                    var isUploaded = await _storageService.UploadAsync("somefile.zip", stream, 
-                        new[] { "somefile.log" });
+                    await _storageService.UploadAsync(archiveFileName, stream, new[] { "somefile.log" });
+                    var exists = await _storageService.ExistsAsync(archiveFileName);
 
                     // Assert
-                    Assert.True(isUploaded);
+                    Assert.True(exists);
                 }
+            }
+        }
+
+        #endregion
+
+        #region ExistsAsync
+
+        [Fact]
+        public async Task ExistsAsync_EmptyArchiveName_ThrowsArgumentNullException()
+        {
+            // Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
+                await _storageService.GetInnerFileNamesAsync(string.Empty));
+        }
+
+        [Fact]
+        public async Task ExistsAsync_IncorrectArchiveName_ReturnsFalse()
+        {
+            // Act
+            var exists = await _storageService.ExistsAsync("somefile");
+
+            // Assert
+            Assert.False(exists);
+        }
+
+        [Fact]
+        public async Task ExistsAsync_CorrectArchiveName_ReturnsTrue()
+        {
+            // Arrange
+            const string archiveFileName = "somefile.zip";
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
+            {
+                await _storageService.UploadAsync(archiveFileName, stream, new[] { "somefile.log" });
+
+                // Act
+                var exists = await _storageService.ExistsAsync(archiveFileName);
+
+                // Assert
+                Assert.True(exists);
             }
         }
 
@@ -85,32 +126,19 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task GetInnerFileNamesAsync_IncorrectArchiveName_ReturnsNull()
-        {
-            // Act
-            var result = await _storageService.GetInnerFileNamesAsync("somefile");
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Empty(result);
-        }
-
-        [Fact]
         public async Task GetInnerFileNamesAsync_CorrectArchiveName_ReturnsInnerFiles()
         {
             // Arrange
-            const string archiveName = "somefile.zip";
+            const string archiveFileName = "somefile.zip";
             const string innerFileName = "somefile.log";
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                var isUploaded = await _storageService.UploadAsync(archiveName, stream,
-                    new[] { innerFileName });
+                await _storageService.UploadAsync(archiveFileName, stream, new[] { innerFileName });
 
                 // Act
-                var result = await _storageService.GetInnerFileNamesAsync(archiveName);
+                var result = await _storageService.GetInnerFileNamesAsync(archiveFileName);
 
                 // Assert
-                Assert.True(isUploaded);
                 Assert.NotNull(result);
                 Assert.Single(result, resultFileName => resultFileName == innerFileName);
             }
@@ -125,51 +153,27 @@ namespace ValidationPipeline.LogStorage.Tests
         {
             // Assert
             await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
-                await _storageService.DownloadAsync(string.Empty, new MemoryStream()));
+                await _storageService.DownloadAsync(string.Empty));
         }
 
         [Fact]
-        public async Task DownloadAsync_StreamNull_ThrowsArgumentNullException()
-        {
-            // Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
-                await _storageService.DownloadAsync("somefile.zip", Stream.Null));
-        }
-
-        [Fact]
-        public async Task DownloadAsync_IncorrectArchiveName_ReturnsFalse()
-        {
-            // Act
-            var isDownloaded = await _storageService.DownloadAsync("somefile", new MemoryStream());
-
-            // Assert
-            Assert.False(isDownloaded);
-        }
-
-        [Fact]
-        public async Task DownloadAsync_CorrectArchiveName_SetsStream()
+        public async Task DownloadAsync_CorrectArchiveName_SetsTargetStream()
         {
             // Arrange
-            const string archiveName = "somefile.zip";
+            const string archiveFileName = "somefile.zip";
             const string expectedContent = "hello world";
 
             using (var uploadStream = new MemoryStream(Encoding.UTF8.GetBytes(expectedContent)))
             {
-                var isUploaded = await _storageService.UploadAsync(archiveName, uploadStream, 
-                    new[] {"someinnerfile"});
+                await _storageService.UploadAsync(archiveFileName, uploadStream, new[] {"someinnerfile"});
 
-                using (var downloadStream = new MemoryStream())
-                {
-                    // Act
-                    var isDownloaded = await _storageService.DownloadAsync(archiveName, downloadStream);
-                    var actualContent = Encoding.UTF8.GetString(downloadStream.ToArray());
+                // Act
+                var downloadStream = (MemoryStream)await _storageService.DownloadAsync(archiveFileName);
+                var actualContent = Encoding.UTF8.GetString(downloadStream.ToArray());
 
-                    // Assert
-                    Assert.True(isUploaded);
-                    Assert.True(isDownloaded);
-                    Assert.NotEqual(0, downloadStream.Length);
-                    Assert.Equal(expectedContent, actualContent);
-                }
+                // Assert
+                Assert.NotEqual(0, downloadStream.Length);
+                Assert.Equal(expectedContent, actualContent);
             }
         }
 

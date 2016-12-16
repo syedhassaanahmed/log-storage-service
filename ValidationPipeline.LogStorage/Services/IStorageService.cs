@@ -6,10 +6,11 @@ namespace ValidationPipeline.LogStorage.Services
 {
     public interface IStorageService
     {
-        Task<bool> UploadAsync(string archiveFileName, Stream archiveStream,
+        Task UploadAsync(string archiveFileName, Stream archiveStream,
             IList<string> innerFileNames);
 
+        Task<bool> ExistsAsync(string archiveFileName);
         Task<IEnumerable<string>> GetInnerFileNamesAsync(string archiveFileName);
-        Task<bool> DownloadAsync(string archiveFileName, Stream targetStream);
+        Task<Stream> DownloadAsync(string archiveFileName);
     }
 }

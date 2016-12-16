@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,7 +30,9 @@ namespace ValidationPipeline.LogStorage.Services
             _blobContainer.CreateIfNotExistsAsync().Wait();
         }
 
-        public async Task<bool> UploadAsync(string archiveFileName, Stream archiveStream,
+        #region IStorageService Implementation
+
+        public async Task UploadAsync(string archiveFileName, Stream archiveStream,
             IList<string> innerFileNames)
         {
             if (string.IsNullOrWhiteSpace(archiveFileName))
@@ -43,22 +44,21 @@ namespace ValidationPipeline.LogStorage.Services
             if (innerFileNames == null || !innerFileNames.Any())
                 throw new ArgumentNullException(nameof(innerFileNames));
 
-            try
-            {
-                var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
-                blockBlob.Properties.ContentType = ZipContentType;
+            var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
+            blockBlob.Properties.ContentType = ZipContentType;
 
-                StoreInnerFileNamesInMetaData(innerFileNames, blockBlob);
+            StoreInnerFileNamesInMetaData(innerFileNames, blockBlob);
 
-                await blockBlob.UploadFromStreamAsync(archiveStream);
-                return true;
-            }
-            catch (StorageException exception)
-            {
-                // TODO: report crash to ApplicationInsights
-                Debug.WriteLine(exception);
-                return false;
-            }
+            await blockBlob.UploadFromStreamAsync(archiveStream);
+        }
+
+        public async Task<bool> ExistsAsync(string archiveFileName)
+        {
+            if (string.IsNullOrWhiteSpace(archiveFileName))
+                throw new ArgumentNullException(nameof(archiveFileName));
+
+            var blob = _blobContainer.GetBlobReference(archiveFileName);
+            return await blob.ExistsAsync();
         }
 
         public async Task<IEnumerable<string>> GetInnerFileNamesAsync(string archiveFileName)
@@ -66,19 +66,26 @@ namespace ValidationPipeline.LogStorage.Services
             if(string.IsNullOrWhiteSpace(archiveFileName))
                 throw new ArgumentNullException(nameof(archiveFileName));
 
-            try
-            {
-                var blob = _blobContainer.GetBlobReference(archiveFileName);
-                await blob.FetchAttributesAsync();
-                return RetrieveInnerFileNamesFromMetaData(blob);
-            }
-            catch (StorageException exception)
-            {
-                // TODO: report crash to ApplicationInsights
-                Debug.WriteLine(exception);
-                return Enumerable.Empty<string>();
-            }
+            var blob = _blobContainer.GetBlobReference(archiveFileName);
+            await blob.FetchAttributesAsync();
+            return RetrieveInnerFileNamesFromMetaData(blob);
         }
+
+        public async Task<Stream> DownloadAsync(string archiveFileName)
+        {
+            if (string.IsNullOrWhiteSpace(archiveFileName))
+                throw new ArgumentNullException(nameof(archiveFileName));
+
+            var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
+            var memoryStream = new MemoryStream();
+            await blockBlob.DownloadToStreamAsync(memoryStream);
+
+            return memoryStream;
+        }
+
+        #endregion
+
+        #region Helpers
 
         private static void StoreInnerFileNamesInMetaData(IList<string> innerFileNames, CloudBlob blockBlob)
         {
@@ -108,26 +115,6 @@ namespace ValidationPipeline.LogStorage.Services
             return innerFileNames;
         }
 
-        public async Task<bool> DownloadAsync(string archiveFileName, Stream targetStream)
-        {
-            if (string.IsNullOrWhiteSpace(archiveFileName))
-                throw new ArgumentNullException(nameof(archiveFileName));
-
-            if (targetStream == null || targetStream == Stream.Null)
-                throw new ArgumentNullException(nameof(targetStream));
-
-            try
-            {
-                var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
-                await blockBlob.DownloadToStreamAsync(targetStream);
-                return true;
-            }
-            catch (StorageException exception)
-            {
-                // TODO: report crash to ApplicationInsights
-                Debug.WriteLine(exception);
-                return false;
-            }
-        }
+        #endregion
     }
 }

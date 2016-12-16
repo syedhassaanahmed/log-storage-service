@@ -181,7 +181,7 @@ namespace ValidationPipeline.LogStorage.Tests
         {
             // Assert
             Assert.Throws<ArgumentNullException>(() => // Act
-                _archiveService.ExtractFile(null, "file.zip"));
+                _archiveService.ExtractInnerFile(null, "file.zip"));
         }
 
         [Fact]
@@ -192,7 +192,7 @@ namespace ValidationPipeline.LogStorage.Tests
             {
                 // Assert
                 Assert.Throws<ArgumentNullException>(() => // Act
-                    _archiveService.ExtractFile(stream, string.Empty));
+                    _archiveService.ExtractInnerFile(stream, string.Empty));
             }
         }
 
@@ -203,7 +203,7 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
             {
                 // Act
-                _archiveService.ExtractFile(stream, "something");
+                _archiveService.ExtractInnerFile(stream, "something");
 
                 // Assert
                 Assert.True(stream.CanRead);
@@ -217,7 +217,7 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
             {
                 // Act
-                var resultStream = _archiveService.ExtractFile(stream, "something");
+                var resultStream = _archiveService.ExtractInnerFile(stream, "something");
 
                 // Assert
                 Assert.Null(resultStream);
@@ -231,7 +231,7 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
             {
                 // Act
-                var resultStream = _archiveService.ExtractFile(stream, "20161215T100001.log");
+                var resultStream = _archiveService.ExtractInnerFile(stream, "20161215T100001.log");
 
                 // Assert
                 Assert.NotNull(resultStream);
