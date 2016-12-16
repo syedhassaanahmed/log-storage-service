@@ -128,7 +128,7 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task UploadAsync_ZipFile_ReturnsCreatedWithLogFileInfo()
+        public async Task UploadAsync_ZipFile_ReturnsCreatedWithLogFilesInfo()
         {
             // Arrange
             const string innerFileName = "somefile.log";
@@ -173,7 +173,7 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task GetInnerFilesInfoAsync_CorrectArchiveFileName_ReturnsOkWithLogFileInfo()
+        public async Task GetInnerFilesInfoAsync_CorrectArchiveFileName_ReturnsOkWithLogFilesInfo()
         {
             // Arrange
             const string innerFileName = "somefile.log";

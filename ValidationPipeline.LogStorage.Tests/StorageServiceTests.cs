@@ -62,7 +62,7 @@ namespace ValidationPipeline.LogStorage.Tests
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                for (var i = 0; i < 10; i++)
+                for (var i = 0; i < 5; i++)
                 {
                     // Act
                     await _storageService.UploadAsync(archiveFileName, stream, new[] { "somefile.log" });
@@ -157,19 +157,21 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task DownloadAsync_CorrectArchiveName_SetsTargetStream()
+        public async Task DownloadAsync_CorrectArchiveName_ReturnsStream()
         {
             // Arrange
             const string archiveFileName = "somefile.zip";
             const string expectedContent = "hello world";
 
-            using (var uploadStream = new MemoryStream(Encoding.UTF8.GetBytes(expectedContent)))
+            var encoding = Encoding.UTF8;
+
+            using (var uploadStream = new MemoryStream(encoding.GetBytes(expectedContent)))
             {
                 await _storageService.UploadAsync(archiveFileName, uploadStream, new[] {"someinnerfile"});
 
                 // Act
                 var downloadStream = (MemoryStream)await _storageService.DownloadAsync(archiveFileName);
-                var actualContent = Encoding.UTF8.GetString(downloadStream.ToArray());
+                var actualContent = encoding.GetString(downloadStream.ToArray());
 
                 // Assert
                 Assert.NotEqual(0, downloadStream.Length);
