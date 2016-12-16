@@ -30,8 +30,8 @@ namespace ValidationPipeline.LogStorage.Tests
             _mockStorageService = Substitute.For<IStorageService>();
 
             var webHostBuilder = new WebHostBuilder()
-                .UseStartup<Startup>()
-                .ConfigureServices(services =>
+                .UseStartup<Startup>() // Borrow Startup logic we have from app under test
+                .ConfigureServices(services => // but override services with mocks
                 {
                     services
                         .AddTransient(serviceProvider => _mockArchiveService)
@@ -42,7 +42,7 @@ namespace ValidationPipeline.LogStorage.Tests
             _client = server.CreateClient();
         }
 
-        #region Upload Tests
+        #region UploadAsync Tests
 
         [Fact]
         public async Task UploadAsync_NoFileName_ReturnsNotFound()
@@ -121,14 +121,14 @@ namespace ValidationPipeline.LogStorage.Tests
             _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
             _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(false);
 
-            const string fileName = "empty.zip";
-            using (var stream = File.Open($"{TestDataPath}/{fileName}", FileMode.Open, FileAccess.Read))
+            const string archiveName = "empty.zip";
+            using (var stream = File.Open($"{TestDataPath}/{archiveName}", FileMode.Open, FileAccess.Read))
             {
                 var streamContent = new StreamContent(stream);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
 
                 // Act
-                var response = await _client.PutAsync($"/api/logs/{fileName}", streamContent);
+                var response = await _client.PutAsync($"/api/logs/{archiveName}", streamContent);
 
                 // Assert
                 Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -146,7 +146,7 @@ namespace ValidationPipeline.LogStorage.Tests
                 .Returns(new[] { innerFileName });
 
             _mockStorageService.UploadAsync(Arg.Any<string>(), Arg.Any<Stream>(),
-                Arg.Any<IEnumerable<string>>()).Returns(true);
+                Arg.Any<IList<string>>()).Returns(true);
 
             const string archiveName = "20161215.zip";
             var route = $"/api/logs/{archiveName}";
@@ -180,7 +180,7 @@ namespace ValidationPipeline.LogStorage.Tests
                 .Returns(new[] { innerFileName });
 
             _mockStorageService.UploadAsync(Arg.Any<string>(), Arg.Any<Stream>(), 
-                Arg.Any<IEnumerable<string>>()).Returns(false);
+                Arg.Any<IList<string>>()).Returns(false);
 
             const string archiveName = "20161215.zip";
             var route = $"/api/logs/{archiveName}";
