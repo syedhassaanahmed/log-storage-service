@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -26,7 +27,7 @@ namespace ValidationPipeline.LogStorage.Services
         {
             using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
             {
-                return archive.Entries.Count > 0;
+                return archive.Entries.Count == 0;
             }
         }
 
@@ -40,9 +41,12 @@ namespace ValidationPipeline.LogStorage.Services
 
         public Stream ExtractFile(Stream archiveStream, string fileName)
         {
+            if (string.IsNullOrWhiteSpace(fileName))
+                throw new ArgumentNullException(nameof(fileName));
+
             using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
             {
-                return archive.GetEntry(fileName).Open();
+                return archive.GetEntry(fileName)?.Open();
             }
         }
     }

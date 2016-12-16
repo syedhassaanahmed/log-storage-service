@@ -35,6 +35,8 @@ namespace ValidationPipeline.LogStorage.Tests
             _client = server.CreateClient();
         }
 
+        #region Upload Tests
+
         [Fact]
         public async Task Upload_NoFileName_ReturnsNotFound()
         {
@@ -165,5 +167,7 @@ namespace ValidationPipeline.LogStorage.Tests
                 Assert.Single(filesInfo, file => file.Url == url);
             }
         }
+
+        #endregion
     }
 }
