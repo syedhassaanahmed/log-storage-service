@@ -19,16 +19,20 @@ namespace ValidationPipeline.LogStorage.Tests
     {
         private readonly HttpClient _client;
         private readonly IArchiveService _mockArchiveService;
+        private readonly IStorageService _mockStorageService;
 
         public LogsControllerTests()
         {
             _mockArchiveService = Substitute.For<IArchiveService>();
+            _mockStorageService = Substitute.For<IStorageService>();
 
             var webHostBuilder = new WebHostBuilder()
                 .UseStartup<Startup>()
                 .ConfigureServices(services =>
                 {
-                    services.AddTransient(s => _mockArchiveService);
+                    services
+                        .AddTransient(serviceProvider => _mockArchiveService)
+                        .AddTransient(serviceProvider => _mockStorageService);
                 });
 
             var server = new TestServer(webHostBuilder);
@@ -141,6 +145,9 @@ namespace ValidationPipeline.LogStorage.Tests
             _mockArchiveService.GetInnerFileNames(Arg.Any<Stream>())
                 .Returns(new[] { innerFileName });
 
+            _mockStorageService.UploadAsync(Arg.Any<string>(), Arg.Any<Stream>(),
+                Arg.Any<IEnumerable<string>>()).Returns(true);
+
             const string archiveName = "20161215.zip";
             var route = $"/api/logs/{archiveName}";
 
@@ -159,6 +166,35 @@ namespace ValidationPipeline.LogStorage.Tests
                 Assert.Equal(route, response.Headers.Location.PathAndQuery);
                 Assert.Single(filesInfo, file => 
                     file.Url.EndsWith($"{route}/{innerFileName}"));
+            }
+        }
+
+        [Fact]
+        public async Task Upload_ZipFileWhenStorageError_ReturnsInternalServerError()
+        {
+            // Arrange
+            const string innerFileName = "somefile.log";
+            _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
+            _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(true);
+            _mockArchiveService.GetInnerFileNames(Arg.Any<Stream>())
+                .Returns(new[] { innerFileName });
+
+            _mockStorageService.UploadAsync(Arg.Any<string>(), Arg.Any<Stream>(), 
+                Arg.Any<IEnumerable<string>>()).Returns(false);
+
+            const string archiveName = "20161215.zip";
+            var route = $"/api/logs/{archiveName}";
+
+            using (var stream = File.Open($"TestData/{archiveName}", FileMode.Open, FileAccess.Read))
+            {
+                var streamContent = new StreamContent(stream);
+                streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
+
+                // Act
+                var response = await _client.PutAsync(route, streamContent);
+
+                // Assert
+                Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
             }
         }
 

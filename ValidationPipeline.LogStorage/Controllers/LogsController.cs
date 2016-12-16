@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using ValidationPipeline.LogStorage.Models;
@@ -14,16 +16,19 @@ namespace ValidationPipeline.LogStorage.Controllers
         private const string ZipContentType = "application/zip";
 
         private readonly IArchiveService _archiveService;
+        private readonly IStorageService _storageService;
 
-        public LogsController(IArchiveService archiveService)
+        public LogsController(IArchiveService archiveService, 
+            IStorageService storageService)
         {
             _archiveService = archiveService;
+            _storageService = storageService;
         }
 
         #region API Methods
 
         [HttpPut("{archiveFileName}")]
-        public IActionResult Upload(string archiveFileName)
+        public async Task<IActionResult> Upload(string archiveFileName)
         {
             if (Request.Body.Length == 0)
                 return BadRequest();
@@ -37,9 +42,14 @@ namespace ValidationPipeline.LogStorage.Controllers
             if (!_archiveService.IsEmpty(Request.Body))
                 return BadRequest();
 
-            var innerFileNames = _archiveService.GetInnerFileNames(Request.Body);
-            var filesInfo = CreateLogFileInfo(innerFileNames);
+            var innerFileNames = _archiveService.GetInnerFileNames(Request.Body).ToList();
+            var isUploaded = await _storageService.UploadAsync(archiveFileName, 
+                Request.Body, innerFileNames);
 
+            if (!isUploaded)
+                return new StatusCodeResult((int)HttpStatusCode.InternalServerError);
+
+            var filesInfo = CreateLogFilesInfo(innerFileNames);
             return Created(Request.GetEncodedUrl(), filesInfo);
         }
 
@@ -66,7 +76,7 @@ namespace ValidationPipeline.LogStorage.Controllers
                        StringComparison.OrdinalIgnoreCase);
         }
 
-        private IEnumerable<LogFileInfo> CreateLogFileInfo(IEnumerable<string> innerFileNames)
+        private IEnumerable<LogFileInfo> CreateLogFilesInfo(IEnumerable<string> innerFileNames)
         {
             var encodedUrl = Request.GetEncodedUrl();
 

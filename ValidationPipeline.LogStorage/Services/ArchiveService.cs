@@ -39,14 +39,14 @@ namespace ValidationPipeline.LogStorage.Services
             }
         }
 
-        public Stream ExtractFile(Stream archiveStream, string fileName)
+        public Stream ExtractFile(Stream archiveStream, string innerFileName)
         {
-            if (string.IsNullOrWhiteSpace(fileName))
-                throw new ArgumentNullException(nameof(fileName));
+            if (string.IsNullOrWhiteSpace(innerFileName))
+                throw new ArgumentNullException(nameof(innerFileName));
 
             using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
             {
-                return archive.GetEntry(fileName)?.Open();
+                return archive.GetEntry(innerFileName)?.Open();
             }
         }
     }
