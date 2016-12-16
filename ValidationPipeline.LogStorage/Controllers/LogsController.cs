@@ -28,7 +28,7 @@ namespace ValidationPipeline.LogStorage.Controllers
         #region API Methods
 
         [HttpPut("{archiveFileName}")]
-        public async Task<IActionResult> Upload(string archiveFileName)
+        public async Task<IActionResult> UploadAsync(string archiveFileName)
         {
             if (Request.Body.Length == 0)
                 return BadRequest();

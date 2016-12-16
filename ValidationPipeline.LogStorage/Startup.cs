@@ -11,6 +11,8 @@ namespace ValidationPipeline.LogStorage
 {
     public class Startup
     {
+        private const string StorageConnectionStringKey = "BlobStorage:ConnectionString";
+
         public IConfigurationRoot Configuration { get; }
 
         public Startup(IHostingEnvironment env)
@@ -33,7 +35,11 @@ namespace ValidationPipeline.LogStorage
                     options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
                 });
 
+            var connectionString = Configuration.GetValue<string>(StorageConnectionStringKey);
+
             services.TryAddTransient<IArchiveService, ArchiveService>();
+            services.TryAddTransient<IStorageService>(serviceProvider =>
+                new StorageService(connectionString));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

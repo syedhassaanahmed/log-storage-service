@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -17,6 +18,8 @@ namespace ValidationPipeline.LogStorage.Tests
 {
     public class LogsControllerTests
     {
+        private const string TestDataPath = "TestData/LogsControllerTests";
+
         private readonly HttpClient _client;
         private readonly IArchiveService _mockArchiveService;
         private readonly IStorageService _mockStorageService;
@@ -42,7 +45,7 @@ namespace ValidationPipeline.LogStorage.Tests
         #region Upload Tests
 
         [Fact]
-        public async Task Upload_NoFileName_ReturnsNotFound()
+        public async Task UploadAsync_NoFileName_ReturnsNotFound()
         {
             // Act
             var response = await _client.PutAsync("/api/logs/", new StreamContent(Stream.Null));
@@ -52,7 +55,7 @@ namespace ValidationPipeline.LogStorage.Tests
         }
         
         [Fact]
-        public async Task Upload_EmptyBody_ReturnsBadRequest()
+        public async Task UploadAsync_EmptyBody_ReturnsBadRequest()
         {
             // Act
             var response = await _client.PutAsync("/api/logs/filename.zip", new StreamContent(Stream.Null));
@@ -62,14 +65,13 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task Upload_NoContentType_ReturnsUnsupportedMediaType()
+        public async Task UploadAsync_NoContentType_ReturnsUnsupportedMediaType()
         {
             // Arrange
-            const string fileName = "20161215.zip";
-            using (var stream = File.Open($"TestData/{fileName}", FileMode.Open, FileAccess.Read))
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 // Act
-                var response = await _client.PutAsync($"/api/logs/{fileName}", new StreamContent(stream));
+                var response = await _client.PutAsync("/api/logs/somefile", new StreamContent(stream));
 
                 // Assert
                 Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
@@ -77,17 +79,16 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task Upload_NonZipContentType_ReturnsUnsupportedMediaType()
+        public async Task UploadAsync_NonZipContentType_ReturnsUnsupportedMediaType()
         {
             // Arrange
-            const string fileName = "20161215.zip";
-            using (var stream = File.Open($"TestData/{fileName}", FileMode.Open, FileAccess.Read))
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 var streamContent = new StreamContent(stream);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/txt");
 
                 // Act
-                var response = await _client.PutAsync($"/api/logs/{fileName}", streamContent);
+                var response = await _client.PutAsync("/api/logs/somefile", streamContent);
 
                 // Assert
                 Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
@@ -95,19 +96,18 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task Upload_NonZipFileWithZipContentType_ReturnsUnsupportedMediaType()
+        public async Task UploadAsync_NonZipFileWithZipContentType_ReturnsUnsupportedMediaType()
         {
             // Arrange
             _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(false);
 
-            const string fileName = "non-zip-file.txt";
-            using (var stream = File.Open($"TestData/{fileName}", FileMode.Open, FileAccess.Read))
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 var streamContent = new StreamContent(stream);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
 
                 // Act
-                var response = await _client.PutAsync("/api/logs/somefile.zip", streamContent);
+                var response = await _client.PutAsync("/api/logs/somefile", streamContent);
 
                 // Assert
                 Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
@@ -115,14 +115,14 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task Upload_EmptyZipFile_ReturnsBadRequest()
+        public async Task UploadAsync_EmptyZipFile_ReturnsBadRequest()
         {
             // Arrange
             _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
             _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(false);
 
             const string fileName = "empty.zip";
-            using (var stream = File.Open($"TestData/{fileName}", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/{fileName}", FileMode.Open, FileAccess.Read))
             {
                 var streamContent = new StreamContent(stream);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
@@ -136,7 +136,7 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task Upload_ZipFile_ReturnsCreatedWithLogFileInfo()
+        public async Task UploadAsync_ZipFile_ReturnsCreatedWithLogFileInfo()
         {
             // Arrange
             const string innerFileName = "somefile.log";
@@ -151,7 +151,7 @@ namespace ValidationPipeline.LogStorage.Tests
             const string archiveName = "20161215.zip";
             var route = $"/api/logs/{archiveName}";
 
-            using (var stream = File.Open($"TestData/{archiveName}", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/{archiveName}", FileMode.Open, FileAccess.Read))
             {
                 var streamContent = new StreamContent(stream);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
@@ -170,7 +170,7 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task Upload_ZipFileWhenStorageError_ReturnsInternalServerError()
+        public async Task UploadAsync_ZipFileWhenStorageError_ReturnsInternalServerError()
         {
             // Arrange
             const string innerFileName = "somefile.log";
@@ -185,7 +185,7 @@ namespace ValidationPipeline.LogStorage.Tests
             const string archiveName = "20161215.zip";
             var route = $"/api/logs/{archiveName}";
 
-            using (var stream = File.Open($"TestData/{archiveName}", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/{archiveName}", FileMode.Open, FileAccess.Read))
             {
                 var streamContent = new StreamContent(stream);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
