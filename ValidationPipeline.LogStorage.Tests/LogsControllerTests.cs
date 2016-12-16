@@ -230,7 +230,7 @@ namespace ValidationPipeline.LogStorage.Tests
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal(response.Content.Headers.ContentType, 
-                MediaTypeHeaderValue.Parse(ZipContentType));
+                MediaTypeHeaderValue.Parse("application/octet-stream"));
 
             Assert.Equal(expectedContent, actualContent);
         }

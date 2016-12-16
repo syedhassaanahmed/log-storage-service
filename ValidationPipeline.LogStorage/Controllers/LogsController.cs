@@ -14,6 +14,7 @@ namespace ValidationPipeline.LogStorage.Controllers
     public class LogsController : Controller
     {
         private const string ZipContentType = "application/zip";
+        private const string BinaryContentType = "application/octet-stream";
 
         private readonly IArchiveService _archiveService;
         private readonly IStorageService _storageService;
@@ -72,7 +73,7 @@ namespace ValidationPipeline.LogStorage.Controllers
             var archiveStream = await _storageService.DownloadAsync(archiveFileName);
             var innerFileStream = _archiveService.ExtractInnerFile(archiveStream, innerFileName);
 
-            return new FileStreamResult(innerFileStream, MediaTypeHeaderValue.Parse(ZipContentType))
+            return new FileStreamResult(innerFileStream, MediaTypeHeaderValue.Parse(BinaryContentType))
             {
                 FileDownloadName = innerFileName
             };
