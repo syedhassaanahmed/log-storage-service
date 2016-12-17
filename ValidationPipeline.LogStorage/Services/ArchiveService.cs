@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using ValidationPipeline.LogStorage.FileProviders;
 
 namespace ValidationPipeline.LogStorage.Services
 {
@@ -31,11 +32,16 @@ namespace ValidationPipeline.LogStorage.Services
             }
         }
 
-        public IEnumerable<string> GetInnerFileNames(Stream archiveStream)
+        public IEnumerable<LogStorageFileInfo> GetMetaData(Stream archiveStream)
         {
             using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
             {
-                return archive.Entries.Select(entry => entry.Name);
+                return archive.Entries.Select(entry => new LogStorageFileInfo
+                {
+                    Length = entry.Length,
+                    Name = entry.Name,
+                    LastModified = entry.LastWriteTime
+                });
             }
         }
 

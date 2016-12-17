@@ -58,8 +58,7 @@ namespace ValidationPipeline.LogStorage
                 {
                     FileProvider = new LogStorageFileProvider(),
                     RequestPath = new PathString(StaticFilesPath)
-                }); ;
-
+                });
         }
     }
 }

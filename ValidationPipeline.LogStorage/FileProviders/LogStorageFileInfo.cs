@@ -13,10 +13,10 @@ namespace ValidationPipeline.LogStorage.FileProviders
         }
 
         public bool Exists => true;
-        public long Length => 10;
+        public long Length { get; set; }
         public string PhysicalPath => string.Empty;
-        public string Name => "somefile.txt";
-        public DateTimeOffset LastModified => DateTimeOffset.Parse("1-1-2016");
+        public string Name { get; set; }
+        public DateTimeOffset LastModified { get; set; }
         public bool IsDirectory => false;
     }
 }

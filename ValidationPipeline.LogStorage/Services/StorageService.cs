@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Newtonsoft.Json;
+using ValidationPipeline.LogStorage.FileProviders;
 
 namespace ValidationPipeline.LogStorage.Services
 {
@@ -30,7 +32,7 @@ namespace ValidationPipeline.LogStorage.Services
         #region IStorageService Implementation
 
         public async Task UploadAsync(string archiveFileName, Stream archiveStream,
-            IList<string> innerFileNames)
+            IList<LogStorageFileInfo> metaData)
         {
             if (string.IsNullOrWhiteSpace(archiveFileName))
                 throw new ArgumentNullException(nameof(archiveFileName));
@@ -38,11 +40,11 @@ namespace ValidationPipeline.LogStorage.Services
             if (archiveStream == null || archiveStream == Stream.Null)
                 throw new ArgumentNullException(nameof(archiveStream));
 
-            if (innerFileNames == null || !innerFileNames.Any())
-                throw new ArgumentNullException(nameof(innerFileNames));
+            if (metaData == null || !metaData.Any())
+                throw new ArgumentNullException(nameof(metaData));
 
             var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
-            StoreMetaData(innerFileNames, blockBlob);
+            StoreMetaData(metaData, blockBlob);
 
             await blockBlob.UploadFromStreamAsync(archiveStream);
         }
@@ -71,7 +73,7 @@ namespace ValidationPipeline.LogStorage.Services
             return blob.Metadata.ContainsKey(MetaDataKeyPrefix + innerFileName);
         }
 
-        public async Task<IEnumerable<string>> GetInnerFileNamesAsync(string archiveFileName)
+        public async Task<IEnumerable<LogStorageFileInfo>> GetMetaDataAsync(string archiveFileName)
         {
             if(string.IsNullOrWhiteSpace(archiveFileName))
                 throw new ArgumentNullException(nameof(archiveFileName));
@@ -97,22 +99,23 @@ namespace ValidationPipeline.LogStorage.Services
 
         #region Helpers
 
-        private static void StoreMetaData(IEnumerable<string> innerFileNames, CloudBlob blockBlob)
+        private static void StoreMetaData(IEnumerable<LogStorageFileInfo> metaData, 
+            CloudBlob blockBlob)
         {
-            foreach (var innerFileName in innerFileNames)
+            foreach (var fileInfo in metaData)
             {
-                blockBlob.Metadata.Add(MetaDataKeyPrefix + innerFileName, innerFileName);
+                blockBlob.Metadata.Add(MetaDataKeyPrefix + fileInfo.Name, 
+                    JsonConvert.SerializeObject(fileInfo));
             }
         }
 
-        private static IEnumerable<string> RetrieveMetaData(CloudBlob blockBlob)
+        private static IEnumerable<LogStorageFileInfo> RetrieveMetaData(CloudBlob blockBlob)
         {
             if (blockBlob.Metadata.Count == 0)
-                return Enumerable.Empty<string>();
+                return Enumerable.Empty<LogStorageFileInfo>();
 
-            return blockBlob.Metadata.Keys
-                .Where(key => key.StartsWith(MetaDataKeyPrefix))
-                .Select(key => key.Replace(MetaDataKeyPrefix, string.Empty));
+            return blockBlob.Metadata.Keys.Where(key => key.StartsWith(MetaDataKeyPrefix))
+                .Select(key => JsonConvert.DeserializeObject<LogStorageFileInfo>(blockBlob.Metadata[key]));
         }
 
         #endregion

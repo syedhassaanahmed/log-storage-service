@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NSubstitute;
 using ValidationPipeline.LogStorage.Extensions;
+using ValidationPipeline.LogStorage.FileProviders;
 using ValidationPipeline.LogStorage.Models;
 
 namespace ValidationPipeline.LogStorage.Tests
@@ -136,8 +137,8 @@ namespace ValidationPipeline.LogStorage.Tests
             const string innerFileName = "somefile.log";
             _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
             _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(true);
-            _mockArchiveService.GetInnerFileNames(Arg.Any<Stream>())
-                .Returns(new[] { innerFileName });
+            _mockArchiveService.GetMetaData(Arg.Any<Stream>())
+                .Returns(new[] {new LogStorageFileInfo {Name = innerFileName}});
 
             const string archiveFileName = "20161215.zip";
             var route = $"/api/logs/{archiveFileName}";
@@ -163,10 +164,10 @@ namespace ValidationPipeline.LogStorage.Tests
 
         #endregion
 
-        #region GetInnerFilesInfoAsync
+        #region GetMetaDataAsync
 
         [Fact]
-        public async Task GetInnerFilesInfoAsync_IncorrectArchiveName_ReturnsNotFound()
+        public async Task GetMetaDataAsync_IncorrectArchiveName_ReturnsNotFound()
         {
             // Act
             var response = await _client.GetAsync("/api/logs/file.zip");
@@ -176,14 +177,14 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task GetInnerFilesInfoAsync_CorrectArchiveFileName_ReturnsOkWithLogFilesInfo()
+        public async Task GetMetaDataAsync_CorrectArchiveFileName_ReturnsOkWithLogFilesInfo()
         {
             // Arrange
             var innerFileName = "somefile.log".ToBase64();
 
             _mockStorageService.ExistsAsync(Arg.Any<string>()).Returns(true);
-            _mockStorageService.GetInnerFileNamesAsync(Arg.Any<string>())
-                .Returns(new[] {innerFileName});
+            _mockStorageService.GetMetaDataAsync(Arg.Any<string>())
+                .Returns(new[] { new LogStorageFileInfo { Name = innerFileName } });
 
             const string archiveFileName = "file.zip";
             var route = $"/api/logs/{archiveFileName}";

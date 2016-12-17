@@ -120,24 +120,24 @@ namespace ValidationPipeline.LogStorage.Tests
 
         #endregion
 
-        #region GetInnerFileNames
+        #region GetMetaData
 
         [Fact]
-        public void GetInnerFileNames_StreamNull_ThrowsArgumentNullException()
+        public void GetMetaData_StreamNull_ThrowsArgumentNullException()
         {
             // Assert
             Assert.Throws<ArgumentNullException>(() => // Act
-                _archiveService.GetInnerFileNames(null));
+                _archiveService.GetMetaData(null));
         }
 
         [Fact]
-        public void GetInnerFileNames_Stream_RemainsOpen()
+        public void GetMetaData_Stream_RemainsOpen()
         {
             // Arrange
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
             {
                 // Act
-                _archiveService.GetInnerFileNames(stream);
+                _archiveService.GetMetaData(stream);
 
                 // Assert
                 Assert.True(stream.CanRead);
@@ -145,13 +145,13 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public void GetInnerFileNames_Stream_ReturnsFileNames()
+        public void GetMetaData_Stream_ReturnsMetaData()
         {
             // Arrange
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
             {
                 // Act
-                var result = _archiveService.GetInnerFileNames(stream);
+                var result = _archiveService.GetMetaData(stream);
 
                 // Assert
                 Assert.Equal(3, result.Count());
@@ -159,13 +159,13 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public void GetInnerFileNames_EmptyArchive_ReturnsEmptyCollection()
+        public void GetMetaData_EmptyArchive_ReturnsEmptyCollection()
         {
             // Arrange
             using (var stream = File.Open($"{TestDataPath}/empty.zip", FileMode.Open, FileAccess.Read))
             {
                 // Act
-                var result = _archiveService.GetInnerFileNames(stream);
+                var result = _archiveService.GetMetaData(stream);
 
                 // Assert
                 Assert.Empty(result);

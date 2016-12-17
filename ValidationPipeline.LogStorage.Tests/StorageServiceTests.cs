@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using ValidationPipeline.LogStorage.Extensions;
+using ValidationPipeline.LogStorage.FileProviders;
 using ValidationPipeline.LogStorage.Services;
 using Xunit;
 
@@ -44,7 +45,7 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task UploadAsync_EmptyInnerFilesCollection_ThrowsArgumentNullException()
+        public async Task UploadAsync_EmptyMetaData_ThrowsArgumentNullException()
         {
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
@@ -67,7 +68,7 @@ namespace ValidationPipeline.LogStorage.Tests
                 {
                     // Act
                     await _storageService.UploadAsync(archiveFileName, stream, 
-                        new[] { "somefile.log".ToBase64() });
+                        new[] { new LogStorageFileInfo() });
 
                     var exists = await _storageService.ExistsAsync(archiveFileName);
 
@@ -86,7 +87,7 @@ namespace ValidationPipeline.LogStorage.Tests
         {
             // Assert
             await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
-                await _storageService.GetInnerFileNamesAsync(string.Empty));
+                await _storageService.GetMetaDataAsync(string.Empty));
         }
 
         [Fact]
@@ -106,8 +107,8 @@ namespace ValidationPipeline.LogStorage.Tests
             const string archiveFileName = "somefile.zip";
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                await _storageService.UploadAsync(archiveFileName, stream, 
-                    new[] {"somefile.log".ToBase64()});
+                await _storageService.UploadAsync(archiveFileName, stream,
+                    new[] {new LogStorageFileInfo()});
 
                 // Act
                 var exists = await _storageService.ExistsAsync(archiveFileName);
@@ -119,32 +120,33 @@ namespace ValidationPipeline.LogStorage.Tests
 
         #endregion
 
-        #region GetInnerFileNamesAsync
+        #region GetMetaDataAsync
 
         [Fact]
-        public async Task GetInnerFileNamesAsync_EmptyArchiveName_ThrowsArgumentNullException()
+        public async Task GetMetaDataAsync_EmptyArchiveName_ThrowsArgumentNullException()
         {
             // Assert
             await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
-                await _storageService.GetInnerFileNamesAsync(string.Empty));
+                await _storageService.GetMetaDataAsync(string.Empty));
         }
 
         [Fact]
-        public async Task GetInnerFileNamesAsync_CorrectArchiveName_ReturnsInnerFiles()
+        public async Task GetMetaDataAsync_CorrectArchiveName_ReturnsMetaData()
         {
             // Arrange
             const string archiveFileName = "somefile.zip";
             var innerFileName = "somefile.log".ToBase64();
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                await _storageService.UploadAsync(archiveFileName, stream, new[] { innerFileName });
+                await _storageService.UploadAsync(archiveFileName, stream,
+                    new[] {new LogStorageFileInfo {Name = innerFileName}});
 
                 // Act
-                var result = await _storageService.GetInnerFileNamesAsync(archiveFileName);
+                var metaData = await _storageService.GetMetaDataAsync(archiveFileName);
 
                 // Assert
-                Assert.NotNull(result);
-                Assert.Single(result, resultFileName => resultFileName == innerFileName);
+                Assert.NotNull(metaData);
+                Assert.Single(metaData, fileInfo => fileInfo.Name == innerFileName);
             }
         }
 
@@ -171,7 +173,8 @@ namespace ValidationPipeline.LogStorage.Tests
 
             using (var uploadStream = new MemoryStream(encoding.GetBytes(expectedContent)))
             {
-                await _storageService.UploadAsync(archiveFileName, uploadStream, new[] {"someinnerfile"});
+                await _storageService.UploadAsync(archiveFileName, uploadStream,
+                    new[] {new LogStorageFileInfo()});
 
                 // Act
                 var downloadStream = (MemoryStream)await _storageService.DownloadAsync(archiveFileName);

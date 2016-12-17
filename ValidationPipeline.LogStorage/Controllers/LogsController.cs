@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using ValidationPipeline.LogStorage.Extensions;
+using ValidationPipeline.LogStorage.FileProviders;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
@@ -46,19 +47,19 @@ namespace ValidationPipeline.LogStorage.Controllers
 
             //Convert filename to valid path for static file download
             archiveFileName = archiveFileName.Replace(".", "_");
-            var innerFileNames = _archiveService.GetInnerFileNames(Request.Body);
+            var metaData = _archiveService.GetMetaData(Request.Body).ToList();
 
             // Blob Storage Metadata Name only tolerates C# identifiers
             // That's why we base64 encode file names before passing it to StorageService
-            var encodedFileNames = Base64Encode(innerFileNames).ToList();
-            await _storageService.UploadAsync(archiveFileName, Request.Body, encodedFileNames);
+            Base64Encode(metaData);
+            await _storageService.UploadAsync(archiveFileName, Request.Body, metaData);
 
-            var archiveResponse = CreateArchiveResponse(archiveFileName, encodedFileNames);
+            var archiveResponse = CreateArchiveResponse(archiveFileName, metaData);
             return Created(Request.GetEncodedUrl(), archiveResponse);
         }
 
         [HttpGet("{archiveFileName}")]
-        public async Task<IActionResult> GetInnerFilesInfoAsync(string archiveFileName)
+        public async Task<IActionResult> GetMetaDataAsync(string archiveFileName)
         {
             //Convert filename to valid path for static file download
             archiveFileName = archiveFileName.Replace(".", "_");
@@ -67,8 +68,8 @@ namespace ValidationPipeline.LogStorage.Controllers
             if (!exists)
                 return NotFound();
 
-            var innerFileNames = await _storageService.GetInnerFileNamesAsync(archiveFileName);
-            var archiveResponse = CreateArchiveResponse(archiveFileName, innerFileNames);
+            var metaData = await _storageService.GetMetaDataAsync(archiveFileName);
+            var archiveResponse = CreateArchiveResponse(archiveFileName, metaData);
 
             return Ok(archiveResponse);
         }
@@ -103,20 +104,21 @@ namespace ValidationPipeline.LogStorage.Controllers
         }
 
         private IEnumerable<ArchiveResponse> CreateArchiveResponse(string archiveFileName, 
-            IEnumerable<string> innerFileNames)
+            IEnumerable<LogStorageFileInfo> metaData)
         {
             var requestUri = new Uri(Request.GetEncodedUrl());
             var baseUri = requestUri.OriginalString.Replace(requestUri.PathAndQuery, string.Empty);
 
-            return innerFileNames.Select(fileName => new ArchiveResponse
+            return metaData.Select(fileInfo => new ArchiveResponse
             {
-                Url = $"{baseUri}{Startup.StaticFilesPath}/{archiveFileName}/{fileName}"
+                Url = $"{baseUri}{Startup.StaticFilesPath}/{archiveFileName}/{fileInfo.Name}"
             });
         }
 
-        private static IEnumerable<string> Base64Encode(IEnumerable<string> innerFileNames)
+        private static void Base64Encode(IEnumerable<LogStorageFileInfo> metaData)
         {
-            return innerFileNames.Select(fileName => fileName.ToBase64());
+            foreach (var fileInfo in metaData)
+                fileInfo.Name = fileInfo.Name.ToBase64();
         }
 
         #endregion
