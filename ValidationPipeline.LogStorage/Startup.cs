@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Serialization;
+using ValidationPipeline.LogStorage.FileProviders;
 using ValidationPipeline.LogStorage.Services;
 
 namespace ValidationPipeline.LogStorage
@@ -50,7 +52,13 @@ namespace ValidationPipeline.LogStorage
             if (env.IsDevelopment())
                 app.UseDeveloperExceptionPage();
 
-            app.UseMvc();
+            app.UseMvc()
+                .UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new LogStorageFileProvider(),
+                    RequestPath = new PathString("/blob")
+                }); ;
+
         }
     }
 }

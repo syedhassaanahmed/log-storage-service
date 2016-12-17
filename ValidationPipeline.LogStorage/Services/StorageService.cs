@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -87,14 +88,16 @@ namespace ValidationPipeline.LogStorage.Services
 
         #region Helpers
 
-        private static void StoreInnerFileNamesInMetaData(IList<string> innerFileNames, CloudBlob blockBlob)
+        private static void StoreInnerFileNamesInMetaData(ICollection<string> innerFileNames, CloudBlob blockBlob)
         {
             blockBlob.Metadata.Add(FileNamesCountMetaDataKey, innerFileNames.Count.ToString());
-            for (var i = 0; i < innerFileNames.Count; i++)
+            foreach (var innerFileName in innerFileNames)
             {
                 // MetaData Key Name follows C# identifiers convention
-                // Hence we can't store file names in Key
-                blockBlob.Metadata.Add($"{FileNamesMetaDataKeyPrefix}{i}", innerFileNames[i]);
+                // Hence we can't directly store file names in Key
+
+                var encodedFileName = Convert.ToBase64String(Encoding.UTF8.GetBytes(innerFileName));
+                blockBlob.Metadata.Add(encodedFileName, innerFileName);
             }
         }
 
