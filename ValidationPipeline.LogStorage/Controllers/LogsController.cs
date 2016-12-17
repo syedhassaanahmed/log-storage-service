@@ -68,7 +68,7 @@ namespace ValidationPipeline.LogStorage.Controllers
 
             var metaDictionary = await _storageService.GetMetaDataAsync(archiveFileName);
 
-            // Filter our keys
+            // Select only metadata stored by us
             metaDictionary = metaDictionary.Where(entry => entry.Key.StartsWith(MetaDataKeyPrefix))
                 .ToDictionary(entry => entry.Key, entry => entry.Value);
 
@@ -96,7 +96,8 @@ namespace ValidationPipeline.LogStorage.Controllers
 
             return metaDictionary.Select(entry => new ArchiveResponse
             {
-                Url = $"{baseUri}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}"
+                Url = $"{baseUri}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}",
+                Bytes = entry.Value.Length
             });
         }
 

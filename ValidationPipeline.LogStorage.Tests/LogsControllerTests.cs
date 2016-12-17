@@ -20,15 +20,12 @@ namespace ValidationPipeline.LogStorage.Tests
     {
         private const string TestDataPath = "TestData/LogsControllerTests";
 
+        private readonly IArchiveService _mockArchiveService = Substitute.For<IArchiveService>();
+        private readonly IStorageService _mockStorageService = Substitute.For<IStorageService>();
         private readonly HttpClient _client;
-        private readonly IArchiveService _mockArchiveService;
-        private readonly IStorageService _mockStorageService;
 
         public LogsControllerTests()
         {
-            _mockArchiveService = Substitute.For<IArchiveService>();
-            _mockStorageService = Substitute.For<IStorageService>();
-
             var webHostBuilder = new WebHostBuilder()
                 .UseStartup<Startup>() // Borrow Startup logic we have from app under test
                 .ConfigureServices(services => // but override services with mocks
