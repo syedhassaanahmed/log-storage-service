@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using ValidationPipeline.LogStorage.FileProviders;
+using ValidationPipeline.LogStorage.Models;
 
 namespace ValidationPipeline.LogStorage.Services
 {
@@ -11,6 +11,11 @@ namespace ValidationPipeline.LogStorage.Services
     {
         public bool IsValid(Stream archiveStream)
         {
+            if (archiveStream == null || archiveStream == Stream.Null)
+                throw new ArgumentNullException(nameof(archiveStream));
+
+            archiveStream.Position = 0;
+
             try
             {
                 using (new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
@@ -26,20 +31,30 @@ namespace ValidationPipeline.LogStorage.Services
 
         public bool IsEmpty(Stream archiveStream)
         {
+            if (archiveStream == null || archiveStream == Stream.Null)
+                throw new ArgumentNullException(nameof(archiveStream));
+
+            archiveStream.Position = 0;
+
             using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
             {
                 return archive.Entries.Count == 0;
             }
         }
 
-        public IEnumerable<LogStorageFileInfo> GetMetaData(Stream archiveStream)
+        public IEnumerable<MetaData> GetMetaData(Stream archiveStream)
         {
+            if (archiveStream == null || archiveStream == Stream.Null)
+                throw new ArgumentNullException(nameof(archiveStream));
+
+            archiveStream.Position = 0;
+
             using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
             {
-                return archive.Entries.Select(entry => new LogStorageFileInfo
+                return archive.Entries.Select(entry => new MetaData
                 {
-                    Length = entry.Length,
                     Name = entry.Name,
+                    Length = entry.Length,
                     LastModified = entry.LastWriteTime
                 });
             }
@@ -47,8 +62,13 @@ namespace ValidationPipeline.LogStorage.Services
 
         public Stream ExtractInnerFile(Stream archiveStream, string innerFileName)
         {
+            if (archiveStream == null || archiveStream == Stream.Null)
+                throw new ArgumentNullException(nameof(archiveStream));
+
             if (string.IsNullOrWhiteSpace(innerFileName))
                 throw new ArgumentNullException(nameof(innerFileName));
+
+            archiveStream.Position = 0;
 
             using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
             {

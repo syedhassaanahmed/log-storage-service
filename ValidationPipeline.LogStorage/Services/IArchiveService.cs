@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using ValidationPipeline.LogStorage.FileProviders;
+using ValidationPipeline.LogStorage.Models;
 
 namespace ValidationPipeline.LogStorage.Services
 {
@@ -8,7 +8,7 @@ namespace ValidationPipeline.LogStorage.Services
     {
         bool IsValid(Stream archiveStream);
         bool IsEmpty(Stream archiveStream);
-        IEnumerable<LogStorageFileInfo> GetMetaData(Stream archiveStream);
+        IEnumerable<MetaData> GetMetaData(Stream archiveStream);
         Stream ExtractInnerFile(Stream archiveStream, string innerFileName);
     }
 }

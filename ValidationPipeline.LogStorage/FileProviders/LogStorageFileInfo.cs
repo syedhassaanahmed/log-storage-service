@@ -1,15 +1,22 @@
 ﻿using System;
 using System.IO;
-using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 
 namespace ValidationPipeline.LogStorage.FileProviders
 {
     public class LogStorageFileInfo : IFileInfo
     {
+        private readonly Func<Task<Stream>> _streamFunc;
+
+        public LogStorageFileInfo(Func<Task<Stream>> streamFunc)
+        {
+            _streamFunc = streamFunc;
+        }
+
         public Stream CreateReadStream()
         {
-            return new MemoryStream(Encoding.UTF8.GetBytes("hello world"));
+            return _streamFunc().Result;
         }
 
         public bool Exists => true;

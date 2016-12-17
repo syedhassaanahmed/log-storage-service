@@ -1,18 +1,21 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using ValidationPipeline.LogStorage.FileProviders;
+using ValidationPipeline.LogStorage.Models;
 
 namespace ValidationPipeline.LogStorage.Services
 {
     public interface IStorageService
     {
         Task UploadAsync(string archiveFileName, Stream archiveStream,
-            IList<LogStorageFileInfo> metaData);
+            IDictionary<string, MetaData> metaData);
 
         Task<bool> ExistsAsync(string archiveFileName);
-        Task<bool> InnerFileExistsAsync(string archiveFileName, string innerFileName);
-        Task<IEnumerable<LogStorageFileInfo>> GetMetaDataAsync(string archiveFileName);
+        Task<IDictionary<string, MetaData>> GetMetaDataAsync(string archiveFileName);
+
+        Task<MetaData> GetInnerFileMetaDataAsync(string archiveFileName,
+            string innerFileName);
+
         Task<Stream> DownloadAsync(string archiveFileName);
     }
 }

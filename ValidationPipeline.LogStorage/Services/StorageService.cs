@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
-using ValidationPipeline.LogStorage.FileProviders;
+using NuGet.Packaging;
+using ValidationPipeline.LogStorage.Models;
 
 namespace ValidationPipeline.LogStorage.Services
 {
     public class StorageService : IStorageService
     {
         private const string ContainerName = "validationpipeline";
-        private const string MetaDataKeyPrefix = "file_";
 
         private readonly CloudBlobContainer _blobContainer;
 
@@ -32,7 +32,7 @@ namespace ValidationPipeline.LogStorage.Services
         #region IStorageService Implementation
 
         public async Task UploadAsync(string archiveFileName, Stream archiveStream,
-            IList<LogStorageFileInfo> metaData)
+            IDictionary<string, MetaData> metaData)
         {
             if (string.IsNullOrWhiteSpace(archiveFileName))
                 throw new ArgumentNullException(nameof(archiveFileName));
@@ -44,8 +44,11 @@ namespace ValidationPipeline.LogStorage.Services
                 throw new ArgumentNullException(nameof(metaData));
 
             var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
-            StoreMetaData(metaData, blockBlob);
 
+            blockBlob.Metadata.AddRange(metaData.ToDictionary(
+                entry => entry.Key, entry => JsonConvert.SerializeObject(entry.Value)));
+
+            archiveStream.Position = 0;
             await blockBlob.UploadFromStreamAsync(archiveStream);
         }
 
@@ -58,11 +61,23 @@ namespace ValidationPipeline.LogStorage.Services
             return await blob.ExistsAsync();
         }
 
-        public async Task<bool> InnerFileExistsAsync(string archiveFileName, string innerFileName)
+        public async Task<IDictionary<string, MetaData>> GetMetaDataAsync(string archiveFileName)
         {
-            var archiveExists = await ExistsAsync(archiveFileName);
-            if (!archiveExists)
-                return false;
+            if(string.IsNullOrWhiteSpace(archiveFileName))
+                throw new ArgumentNullException(nameof(archiveFileName));
+
+            var blob = _blobContainer.GetBlobReference(archiveFileName);
+            await blob.FetchAttributesAsync();
+
+            return blob.Metadata.ToDictionary(entry => entry.Key,
+                entry => JsonConvert.DeserializeObject<MetaData>(entry.Value));
+        }
+
+        public async Task<MetaData> GetInnerFileMetaDataAsync(string archiveFileName,
+            string innerFileName)
+        {
+            if (string.IsNullOrWhiteSpace(archiveFileName))
+                throw new ArgumentNullException(nameof(archiveFileName));
 
             if (string.IsNullOrWhiteSpace(innerFileName))
                 throw new ArgumentNullException(nameof(innerFileName));
@@ -70,17 +85,8 @@ namespace ValidationPipeline.LogStorage.Services
             var blob = _blobContainer.GetBlobReference(archiveFileName);
             await blob.FetchAttributesAsync();
 
-            return blob.Metadata.ContainsKey(MetaDataKeyPrefix + innerFileName);
-        }
-
-        public async Task<IEnumerable<LogStorageFileInfo>> GetMetaDataAsync(string archiveFileName)
-        {
-            if(string.IsNullOrWhiteSpace(archiveFileName))
-                throw new ArgumentNullException(nameof(archiveFileName));
-
-            var blob = _blobContainer.GetBlobReference(archiveFileName);
-            await blob.FetchAttributesAsync();
-            return RetrieveMetaData(blob);
+            return blob.Metadata.ContainsKey(innerFileName) ? 
+                JsonConvert.DeserializeObject<MetaData>(blob.Metadata[innerFileName]) : null;
         }
 
         public async Task<Stream> DownloadAsync(string archiveFileName)
@@ -93,29 +99,6 @@ namespace ValidationPipeline.LogStorage.Services
             await blockBlob.DownloadToStreamAsync(memoryStream);
 
             return memoryStream;
-        }
-
-        #endregion
-
-        #region Helpers
-
-        private static void StoreMetaData(IEnumerable<LogStorageFileInfo> metaData, 
-            CloudBlob blockBlob)
-        {
-            foreach (var fileInfo in metaData)
-            {
-                blockBlob.Metadata.Add(MetaDataKeyPrefix + fileInfo.Name, 
-                    JsonConvert.SerializeObject(fileInfo));
-            }
-        }
-
-        private static IEnumerable<LogStorageFileInfo> RetrieveMetaData(CloudBlob blockBlob)
-        {
-            if (blockBlob.Metadata.Count == 0)
-                return Enumerable.Empty<LogStorageFileInfo>();
-
-            return blockBlob.Metadata.Keys.Where(key => key.StartsWith(MetaDataKeyPrefix))
-                .Select(key => JsonConvert.DeserializeObject<LogStorageFileInfo>(blockBlob.Metadata[key]));
         }
 
         #endregion

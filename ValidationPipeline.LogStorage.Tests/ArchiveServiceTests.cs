@@ -37,6 +37,19 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
+        public void IsValid_StreamPositionNotZero_DoesNotThrowException()
+        {
+            // Arrange
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
+            {
+                stream.Position = stream.Length - 1;
+
+                // Act
+                _archiveService.IsValid(stream);
+            }
+        }
+
+        [Fact]
         public void IsValid_IncorrectFileFormat_ReturnsFalse()
         {
             // Arrange
@@ -54,7 +67,8 @@ namespace ValidationPipeline.LogStorage.Tests
         public void IsValid_CorrectFileFormat_ReturnsTrue()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/empty.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/empty.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 var isValid = _archiveService.IsValid(stream);
@@ -80,7 +94,8 @@ namespace ValidationPipeline.LogStorage.Tests
         public void IsEmpty_Stream_RemainsOpen()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 _archiveService.IsEmpty(stream);
@@ -91,10 +106,25 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
+        public void IsEmpty_StreamPositionNotZero_DoesNotThrowException()
+        {
+            // Arrange
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip",
+                FileMode.Open, FileAccess.Read))
+            {
+                stream.Position = stream.Length - 1;
+
+                // Act
+                _archiveService.IsEmpty(stream);
+            }
+        }
+
+        [Fact]
         public void IsEmpty_FileWithContent_ReturnsFalse()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 var isEmpty = _archiveService.IsEmpty(stream);
@@ -108,7 +138,8 @@ namespace ValidationPipeline.LogStorage.Tests
         public void IsEmpty_FileWithoutContent_ReturnsTrue()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/empty.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/empty.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 var isEmpty = _archiveService.IsEmpty(stream);
@@ -134,7 +165,8 @@ namespace ValidationPipeline.LogStorage.Tests
         public void GetMetaData_Stream_RemainsOpen()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 _archiveService.GetMetaData(stream);
@@ -145,10 +177,25 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
+        public void GetMetaData_StreamPositionNotZero_DoesNotThrowException()
+        {
+            // Arrange
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
+            {
+                stream.Position = stream.Length - 1;
+
+                // Act
+                _archiveService.GetMetaData(stream);
+            }
+        }
+
+        [Fact]
         public void GetMetaData_Stream_ReturnsMetaData()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 var result = _archiveService.GetMetaData(stream);
@@ -162,7 +209,8 @@ namespace ValidationPipeline.LogStorage.Tests
         public void GetMetaData_EmptyArchive_ReturnsEmptyCollection()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/empty.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/empty.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 var result = _archiveService.GetMetaData(stream);
@@ -200,7 +248,8 @@ namespace ValidationPipeline.LogStorage.Tests
         public void ExtractFile_Stream_RemainsOpen()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 _archiveService.ExtractInnerFile(stream, "something");
@@ -211,10 +260,25 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
+        public void ExtractFile_StreamPositionNotZero_DoesNotThrowException()
+        {
+            // Arrange
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
+            {
+                stream.Position = stream.Length - 1;
+
+                // Act
+                _archiveService.ExtractInnerFile(stream, "something");
+            }
+        }
+
+        [Fact]
         public void ExtractFile_IncorrectArchiveName_ReturnsNull()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 var resultStream = _archiveService.ExtractInnerFile(stream, "something");
@@ -228,7 +292,8 @@ namespace ValidationPipeline.LogStorage.Tests
         public void ExtractFile_CorrectArchiveName_ReturnsStream()
         {
             // Arrange
-            using (var stream = File.Open($"{TestDataPath}/20161215.zip", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
             {
                 // Act
                 var resultStream = _archiveService.ExtractInnerFile(stream, "20161215T100001.log");

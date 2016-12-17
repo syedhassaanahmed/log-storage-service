@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
-using ValidationPipeline.LogStorage.Extensions;
-using ValidationPipeline.LogStorage.FileProviders;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
@@ -15,8 +13,7 @@ namespace ValidationPipeline.LogStorage.Controllers
     [Route("api/[controller]")]
     public class LogsController : Controller
     {
-        private const string ZipContentType = "application/zip";
-        private const string BinaryContentType = "application/octet-stream";
+        public const string MetaDataKeyPrefix = "file_";
 
         private readonly IArchiveService _archiveService;
         private readonly IStorageService _storageService;
@@ -33,63 +30,51 @@ namespace ValidationPipeline.LogStorage.Controllers
         [HttpPut("{archiveFileName}")]
         public async Task<IActionResult> UploadAsync(string archiveFileName)
         {
-            if (Request.Body.Length == 0)
+            if (Request.ContentLength == null || Request.ContentLength.Value == 0)
                 return BadRequest();
 
             if (!IsContentTypeSupportedForUpload())
                 return new UnsupportedMediaTypeResult();
 
-            if (!_archiveService.IsValid(Request.Body))
-                return new UnsupportedMediaTypeResult();
+            using (var stream = new MemoryStream())
+            {
+                // Request.Body can only move forward once
+                Request.Body.CopyTo(stream);
 
-            if (!_archiveService.IsEmpty(Request.Body))
-                return BadRequest();
+                if (!_archiveService.IsValid(stream))
+                    return new UnsupportedMediaTypeResult();
 
-            //Convert filename to valid path for static file download
-            archiveFileName = archiveFileName.Replace(".", "_");
-            var metaData = _archiveService.GetMetaData(Request.Body).ToList();
+                if (_archiveService.IsEmpty(stream))
+                    return BadRequest();
 
-            // Blob Storage Metadata Name only tolerates C# identifiers
-            // That's why we base64 encode file names before passing it to StorageService
-            Base64Encode(metaData);
-            await _storageService.UploadAsync(archiveFileName, Request.Body, metaData);
+                var metaData = _archiveService.GetMetaData(stream).ToList();
 
-            var archiveResponse = CreateArchiveResponse(archiveFileName, metaData);
-            return Created(Request.GetEncodedUrl(), archiveResponse);
+                // Blob Storage Metadata Name only tolerates C# identifiers
+                // That's why we create our own name before passing it to StorageService
+                var metaDictionary = CreateMetaDictionary(metaData);
+                await _storageService.UploadAsync(archiveFileName, stream, metaDictionary);
+
+                var archiveResponse = CreateArchiveResponse(archiveFileName, metaDictionary);
+                return Created(Request.GetEncodedUrl(), archiveResponse);
+            }
         }
 
         [HttpGet("{archiveFileName}")]
         public async Task<IActionResult> GetMetaDataAsync(string archiveFileName)
         {
-            //Convert filename to valid path for static file download
-            archiveFileName = archiveFileName.Replace(".", "_");
-
             var exists = await _storageService.ExistsAsync(archiveFileName);
             if (!exists)
                 return NotFound();
 
-            var metaData = await _storageService.GetMetaDataAsync(archiveFileName);
-            var archiveResponse = CreateArchiveResponse(archiveFileName, metaData);
+            var metaDictionary = await _storageService.GetMetaDataAsync(archiveFileName);
+
+            // Filter our keys
+            metaDictionary = metaDictionary.Where(entry => entry.Key.StartsWith(MetaDataKeyPrefix))
+                .ToDictionary(entry => entry.Key, entry => entry.Value);
+
+            var archiveResponse = CreateArchiveResponse(archiveFileName, metaDictionary);
 
             return Ok(archiveResponse);
-        }
-
-        [HttpGet("{archiveFileName}/{innerFileName}")]
-        public async Task<IActionResult> DownloadAsync(string archiveFileName, string innerFileName)
-        {
-            var exists = await _storageService.InnerFileExistsAsync(archiveFileName, innerFileName);
-            if (!exists)
-                return NotFound();
-
-            var archiveStream = await _storageService.DownloadAsync(archiveFileName);
-
-            var decodedFileName = innerFileName.FromBase64();
-            var innerFileStream = _archiveService.ExtractInnerFile(archiveStream, decodedFileName);
-
-            return new FileStreamResult(innerFileStream, MediaTypeHeaderValue.Parse(BinaryContentType))
-            {
-                FileDownloadName = decodedFileName
-            };
         }
 
         #endregion
@@ -99,26 +84,32 @@ namespace ValidationPipeline.LogStorage.Controllers
         private bool IsContentTypeSupportedForUpload()
         {
             return !string.IsNullOrWhiteSpace(Request.ContentType) &&
-                   Request.ContentType.Equals(ZipContentType,
+                   Request.ContentType.Equals(CommonConstants.ZipContentType,
                        StringComparison.OrdinalIgnoreCase);
         }
 
-        private IEnumerable<ArchiveResponse> CreateArchiveResponse(string archiveFileName, 
-            IEnumerable<LogStorageFileInfo> metaData)
+        private IEnumerable<ArchiveResponse> CreateArchiveResponse(string archiveFileName,
+            IDictionary<string, MetaData> metaDictionary)
         {
             var requestUri = new Uri(Request.GetEncodedUrl());
             var baseUri = requestUri.OriginalString.Replace(requestUri.PathAndQuery, string.Empty);
 
-            return metaData.Select(fileInfo => new ArchiveResponse
+            return metaDictionary.Select(entry => new ArchiveResponse
             {
-                Url = $"{baseUri}{Startup.StaticFilesPath}/{archiveFileName}/{fileInfo.Name}"
+                Url = $"{baseUri}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}"
             });
         }
 
-        private static void Base64Encode(IEnumerable<LogStorageFileInfo> metaData)
+        private static IDictionary<string, MetaData> CreateMetaDictionary(IList<MetaData> metaData)
         {
-            foreach (var fileInfo in metaData)
-                fileInfo.Name = fileInfo.Name.ToBase64();
+            var metaDictionary = new Dictionary<string, MetaData>();
+
+            for (var i = 0; i < metaData.Count; i++)
+            {
+                metaDictionary.Add(MetaDataKeyPrefix + i, metaData[i]);
+            }
+
+            return metaDictionary;
         }
 
         #endregion
