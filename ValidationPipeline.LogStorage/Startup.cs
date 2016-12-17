@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
 using ValidationPipeline.LogStorage.FileProviders;
 using ValidationPipeline.LogStorage.Services;
@@ -15,6 +17,8 @@ namespace ValidationPipeline.LogStorage
     public class Startup
     {
         private const string StorageConnectionStringKey = "BlobStorage:ConnectionString";
+        private const string StaticFilesCacheMaxAgeKey = "StaticFiles:CacheMaxAgeSeconds";
+        private const string ControllerCacheDurationKey = "StaticFiles:CacheDurationMinutes";
 
         public IConfigurationRoot Configuration { get; }
 
@@ -32,19 +36,38 @@ namespace ValidationPipeline.LogStorage
         // For more information on how to configure your application, visit http://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc()
+            AddMvcWithCaching(services)
                 .AddJsonOptions(options =>
                 {
-                    options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    options.SerializerSettings.ContractResolver = 
+                        new CamelCasePropertyNamesContractResolver();
                 });
 
             var connectionString = Configuration.GetValue<string>(StorageConnectionStringKey);
 
             services.TryAddTransient<IArchiveService, ArchiveService>();
             services.TryAddTransient<IStorageService>(serviceProvider =>
-                new StorageService(connectionString));
+                    new StorageService(connectionString));
 
             services.TryAddTransient<IFileProvider, LogStorageFileProvider>();
+        }
+
+        private IMvcBuilder AddMvcWithCaching(IServiceCollection services)
+        {
+            return services.AddMvc(options =>
+            {
+                options.CacheProfiles.Add("Default",
+                    new CacheProfile
+                    {
+                        Duration = Configuration.GetValue<int>(ControllerCacheDurationKey)
+                    });
+                options.CacheProfiles.Add("Never",
+                    new CacheProfile
+                    {
+                        Location = ResponseCacheLocation.None,
+                        NoStore = true
+                    });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -56,12 +79,29 @@ namespace ValidationPipeline.LogStorage
                 app.UseDeveloperExceptionPage();
 
             app.UseMvc()
-                .UseStaticFiles(new StaticFileOptions
+                .UseStaticFiles(GetStaticFileOptions(app));
+        }
+
+        private StaticFileOptions GetStaticFileOptions(IApplicationBuilder app)
+        {
+            var cacheMaxAge = Configuration.GetValue<long>(StaticFilesCacheMaxAgeKey);
+
+            return new StaticFileOptions
+            {
+                FileProvider = app.ApplicationServices.GetService<IFileProvider>(),
+
+                // TODO: This is a security risk!!!
+                // Replace this with FileExtensionContentTypeProvider 
+                // once inner file extensions are known
+                ServeUnknownFileTypes = true,
+
+                RequestPath = new PathString(CommonConstants.StaticFilesPath),
+                OnPrepareResponse = responseContext =>
                 {
-                    FileProvider = app.ApplicationServices.GetService<IFileProvider>(),
-                    ServeUnknownFileTypes = true,
-                    RequestPath = new PathString(CommonConstants.StaticFilesPath)
-                });
+                    responseContext.Context.Response.Headers[HeaderNames.CacheControl] =
+                        $"public,max-age={cacheMaxAge}";
+                }
+            };
         }
     }
 }

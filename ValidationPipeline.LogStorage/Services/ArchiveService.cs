@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -23,8 +24,9 @@ namespace ValidationPipeline.LogStorage.Services
                     return true;
                 }
             }
-            catch (InvalidDataException)
+            catch (InvalidDataException e)
             {
+                Debug.WriteLine(e);
                 return false;
             }
         }

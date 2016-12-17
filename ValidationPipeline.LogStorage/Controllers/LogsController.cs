@@ -11,6 +11,7 @@ using ValidationPipeline.LogStorage.Services;
 
 namespace ValidationPipeline.LogStorage.Controllers
 {
+    [ResponseCache(CacheProfileName = "Default")]
     [Route("api/[controller]")]
     public class LogsController : Controller
     {
@@ -28,6 +29,7 @@ namespace ValidationPipeline.LogStorage.Controllers
 
         #region API Methods
 
+        [ResponseCache(CacheProfileName = "Never")]
         [HttpPut("{archiveFileName}")]
         public async Task<IActionResult> UploadAsync(string archiveFileName)
         {
