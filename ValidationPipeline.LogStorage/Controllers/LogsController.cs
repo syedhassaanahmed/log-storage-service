@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
@@ -13,8 +13,7 @@ namespace ValidationPipeline.LogStorage.Controllers
     [Route("api/[controller]")]
     public class LogsController : Controller
     {
-        private const string ZipContentType = "application/zip";
-        private const string BinaryContentType = "application/octet-stream";
+        public const string MetaDataKeyPrefix = "file_";
 
         private readonly IArchiveService _archiveService;
         private readonly IStorageService _storageService;
@@ -31,52 +30,51 @@ namespace ValidationPipeline.LogStorage.Controllers
         [HttpPut("{archiveFileName}")]
         public async Task<IActionResult> UploadAsync(string archiveFileName)
         {
-            if (Request.Body.Length == 0)
+            if (Request.ContentLength == null || Request.ContentLength.Value == 0)
                 return BadRequest();
 
             if (!IsContentTypeSupportedForUpload())
                 return new UnsupportedMediaTypeResult();
 
-            if (!_archiveService.IsValid(Request.Body))
-                return new UnsupportedMediaTypeResult();
+            using (var stream = new MemoryStream())
+            {
+                // Request.Body can only move forward once
+                Request.Body.CopyTo(stream);
 
-            if (!_archiveService.IsEmpty(Request.Body))
-                return BadRequest();
+                if (!_archiveService.IsValid(stream))
+                    return new UnsupportedMediaTypeResult();
 
-            var innerFileNames = _archiveService.GetInnerFileNames(Request.Body).ToList();
-            await _storageService.UploadAsync(archiveFileName, Request.Body, innerFileNames);
+                if (_archiveService.IsEmpty(stream))
+                    return BadRequest();
 
-            var filesInfo = CreateLogFilesInfo(innerFileNames);
-            return Created(Request.GetEncodedUrl(), filesInfo);
+                var metaData = _archiveService.GetMetaData(stream).ToList();
+
+                // Blob Storage Metadata Name only tolerates C# identifiers
+                // That's why we create our own name before passing it to StorageService
+                var metaDictionary = CreateMetaDictionary(metaData);
+                await _storageService.UploadAsync(archiveFileName, stream, metaDictionary);
+
+                var archiveResponse = CreateArchiveResponse(archiveFileName, metaDictionary);
+                return Created(Request.GetEncodedUrl(), archiveResponse);
+            }
         }
 
         [HttpGet("{archiveFileName}")]
-        public async Task<IActionResult> GetInnerFilesInfoAsync(string archiveFileName)
+        public async Task<IActionResult> GetMetaDataAsync(string archiveFileName)
         {
             var exists = await _storageService.ExistsAsync(archiveFileName);
             if (!exists)
                 return NotFound();
 
-            var innerFileNames = await _storageService.GetInnerFileNamesAsync(archiveFileName);
-            var filesInfo = CreateLogFilesInfo(innerFileNames);
+            var metaDictionary = await _storageService.GetMetaDataAsync(archiveFileName);
 
-            return Ok(filesInfo);
-        }
+            // Select only metadata stored by us
+            metaDictionary = metaDictionary.Where(entry => entry.Key.StartsWith(MetaDataKeyPrefix))
+                .ToDictionary(entry => entry.Key, entry => entry.Value);
 
-        [HttpGet("{archiveFileName}/{innerFileName}")]
-        public async Task<IActionResult> DownloadAsync(string archiveFileName, string innerFileName)
-        {
-            var exists = await _storageService.ExistsAsync(archiveFileName);
-            if (!exists)
-                return NotFound();
+            var archiveResponse = CreateArchiveResponse(archiveFileName, metaDictionary);
 
-            var archiveStream = await _storageService.DownloadAsync(archiveFileName);
-            var innerFileStream = _archiveService.ExtractInnerFile(archiveStream, innerFileName);
-
-            return new FileStreamResult(innerFileStream, MediaTypeHeaderValue.Parse(BinaryContentType))
-            {
-                FileDownloadName = innerFileName
-            };
+            return Ok(archiveResponse);
         }
 
         #endregion
@@ -86,18 +84,33 @@ namespace ValidationPipeline.LogStorage.Controllers
         private bool IsContentTypeSupportedForUpload()
         {
             return !string.IsNullOrWhiteSpace(Request.ContentType) &&
-                   Request.ContentType.Equals(ZipContentType,
+                   Request.ContentType.Equals(CommonConstants.ZipContentType,
                        StringComparison.OrdinalIgnoreCase);
         }
 
-        private IEnumerable<LogFileInfo> CreateLogFilesInfo(IEnumerable<string> innerFileNames)
+        private IEnumerable<ArchiveResponse> CreateArchiveResponse(string archiveFileName,
+            IDictionary<string, MetaData> metaDictionary)
         {
-            var encodedUrl = Request.GetEncodedUrl();
+            var requestUri = new Uri(Request.GetEncodedUrl());
+            var baseUri = requestUri.OriginalString.Replace(requestUri.PathAndQuery, string.Empty);
 
-            return innerFileNames.Select(file => new LogFileInfo
+            return metaDictionary.Select(entry => new ArchiveResponse
             {
-                Url = $"{encodedUrl}/{file}"
+                Url = $"{baseUri}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}",
+                Bytes = entry.Value.Length
             });
+        }
+
+        private static IDictionary<string, MetaData> CreateMetaDictionary(IList<MetaData> metaData)
+        {
+            var metaDictionary = new Dictionary<string, MetaData>();
+
+            for (var i = 0; i < metaData.Count; i++)
+            {
+                metaDictionary.Add(MetaDataKeyPrefix + i, metaData[i]);
+            }
+
+            return metaDictionary;
         }
 
         #endregion

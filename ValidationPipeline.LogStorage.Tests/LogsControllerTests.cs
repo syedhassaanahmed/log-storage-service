@@ -18,18 +18,14 @@ namespace ValidationPipeline.LogStorage.Tests
 {
     public class LogsControllerTests
     {
-        private const string ZipContentType = "application/zip";
         private const string TestDataPath = "TestData/LogsControllerTests";
 
+        private readonly IArchiveService _mockArchiveService = Substitute.For<IArchiveService>();
+        private readonly IStorageService _mockStorageService = Substitute.For<IStorageService>();
         private readonly HttpClient _client;
-        private readonly IArchiveService _mockArchiveService;
-        private readonly IStorageService _mockStorageService;
 
         public LogsControllerTests()
         {
-            _mockArchiveService = Substitute.For<IArchiveService>();
-            _mockStorageService = Substitute.For<IStorageService>();
-
             var webHostBuilder = new WebHostBuilder()
                 .UseStartup<Startup>() // Borrow Startup logic we have from app under test
                 .ConfigureServices(services => // but override services with mocks
@@ -63,7 +59,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 // Act
-                var response = await _client.PutAsync("/api/logs/somefile", new StreamContent(stream));
+                var response = await _client.PutAsync("/api/logs/somefile", new StreamContent(stream)
+                {
+                    Headers = { ContentLength = stream.Length}
+                });
 
                 // Assert
                 Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
@@ -76,8 +75,14 @@ namespace ValidationPipeline.LogStorage.Tests
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                var streamContent = new StreamContent(stream);
-                streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/txt");
+                var streamContent = new StreamContent(stream)
+                {
+                    Headers =
+                    {
+                        ContentLength = stream.Length,
+                        ContentType = MediaTypeHeaderValue.Parse("application/txt")
+                    }
+                };
 
                 // Act
                 var response = await _client.PutAsync("/api/logs/somefile", streamContent);
@@ -95,8 +100,14 @@ namespace ValidationPipeline.LogStorage.Tests
 
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                var streamContent = new StreamContent(stream);
-                streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(ZipContentType);
+                var streamContent = new StreamContent(stream)
+                {
+                    Headers =
+                    {
+                        ContentLength = stream.Length,
+                        ContentType = MediaTypeHeaderValue.Parse(CommonConstants.ZipContentType)
+                    }
+                };
 
                 // Act
                 var response = await _client.PutAsync("/api/logs/somefile", streamContent);
@@ -111,16 +122,22 @@ namespace ValidationPipeline.LogStorage.Tests
         {
             // Arrange
             _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
-            _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(false);
+            _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(true);
 
-            const string archiveFileName = "empty.zip";
-            using (var stream = File.Open($"{TestDataPath}/{archiveFileName}", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/empty.zip", 
+                FileMode.Open, FileAccess.Read))
             {
-                var streamContent = new StreamContent(stream);
-                streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(ZipContentType);
+                var streamContent = new StreamContent(stream)
+                {
+                    Headers =
+                    {
+                        ContentLength = stream.Length,
+                        ContentType = MediaTypeHeaderValue.Parse(CommonConstants.ZipContentType)
+                    }
+                };
 
                 // Act
-                var response = await _client.PutAsync($"/api/logs/{archiveFileName}", streamContent);
+                var response = await _client.PutAsync("/api/logs/empty.zip", streamContent);
 
                 // Assert
                 Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -131,39 +148,40 @@ namespace ValidationPipeline.LogStorage.Tests
         public async Task UploadAsync_ZipFile_ReturnsCreatedWithLogFilesInfo()
         {
             // Arrange
-            const string innerFileName = "somefile.log";
             _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
-            _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(true);
-            _mockArchiveService.GetInnerFileNames(Arg.Any<Stream>())
-                .Returns(new[] { innerFileName });
+            _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(false);
+            _mockArchiveService.GetMetaData(Arg.Any<Stream>())
+                .Returns(new[] {new MetaData {Name = "somefile.log" } });
 
-            const string archiveFileName = "20161215.zip";
-            var route = $"/api/logs/{archiveFileName}";
-
-            using (var stream = File.Open($"{TestDataPath}/{archiveFileName}", FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
             {
-                var streamContent = new StreamContent(stream);
-                streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(ZipContentType);
+                var streamContent = new StreamContent(stream)
+                {
+                    Headers =
+                    {
+                        ContentLength = stream.Length,
+                        ContentType = MediaTypeHeaderValue.Parse(CommonConstants.ZipContentType)
+                    }
+                };
 
                 // Act
-                var response = await _client.PutAsync(route, streamContent);
+                var response = await _client.PutAsync("/api/logs/20161215.zip", streamContent);
                 var responseString = await response.Content.ReadAsStringAsync();
-                var filesInfo = JsonConvert.DeserializeObject<List<LogFileInfo>>(responseString);
+                JsonConvert.DeserializeObject<List<ArchiveResponse>>(responseString);
 
                 // Assert
                 Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-                Assert.Equal(route, response.Headers.Location.PathAndQuery);
-                Assert.Single(filesInfo, file => 
-                    file.Url.EndsWith($"{route}/{innerFileName}"));
+                Assert.Equal("/api/logs/20161215.zip", response.Headers.Location.PathAndQuery);
             }
         }
 
         #endregion
 
-        #region GetInnerFilesInfoAsync
+        #region GetMetaDataAsync
 
         [Fact]
-        public async Task GetInnerFilesInfoAsync_IncorrectArchiveName_ReturnsNotFound()
+        public async Task GetMetaDataAsync_IncorrectArchiveName_ReturnsNotFound()
         {
             // Act
             var response = await _client.GetAsync("/api/logs/file.zip");
@@ -173,66 +191,25 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task GetInnerFilesInfoAsync_CorrectArchiveFileName_ReturnsOkWithLogFilesInfo()
+        public async Task GetMetaDataAsync_CorrectArchiveFileName_ReturnsOkWithLogFilesInfo()
         {
             // Arrange
-            const string innerFileName = "somefile.log";
-
             _mockStorageService.ExistsAsync(Arg.Any<string>()).Returns(true);
-            _mockStorageService.GetInnerFileNamesAsync(Arg.Any<string>())
-                .Returns(new[] {innerFileName});
-
-            const string archiveFileName = "file.zip";
-            var route = $"/api/logs/{archiveFileName}";
+            _mockStorageService.GetMetaDataAsync(Arg.Any<string>())
+                .Returns(new Dictionary<string, MetaData>
+                {
+                    {"file_1", new MetaData()}
+                });
 
             // Act
-            var response = await _client.GetAsync(route);
+            var response = await _client.GetAsync("/api/logs/file.zip");
             var responseString = await response.Content.ReadAsStringAsync();
-            var filesInfo = JsonConvert.DeserializeObject<List<LogFileInfo>>(responseString);
+            var filesInfo = JsonConvert.DeserializeObject<List<ArchiveResponse>>(responseString);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Single(filesInfo, file => file.Url.EndsWith($"{route}/{innerFileName}"));
-        }
-
-        #endregion
-
-        #region DownloadAsync
-
-        [Fact]
-        public async Task DownloadAsync_IncorrectArchiveName_ReturnsNotFound()
-        {
-            // Act
-            var response = await _client.GetAsync("/api/logs/file.zip/log.txt");
-
-            // Assert
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        }
-
-        [Fact]
-        public async Task DownloadAsync_CorrectArchiveName_ReturnsOkWithFileContent()
-        {
-            // Arrange
-            const string archiveFileName = "file.zip";
-            const string innerFileName = "somefile.log";
-            const string expectedContent = "hello world";
-
-            _mockStorageService.ExistsAsync(Arg.Any<string>()).Returns(true);
-            _mockArchiveService.ExtractInnerFile(Arg.Any<Stream>(), Arg.Any<string>())
-                .Returns(new MemoryStream(Encoding.UTF8.GetBytes(expectedContent)));
-            
-            var route = $"/api/logs/{archiveFileName}/{innerFileName}";
-
-            // Act
-            var response = await _client.GetAsync(route);
-            var actualContent = await response.Content.ReadAsStringAsync();
-            
-            // Assert
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(response.Content.Headers.ContentType, 
-                MediaTypeHeaderValue.Parse("application/octet-stream"));
-
-            Assert.Equal(expectedContent, actualContent);
+            Assert.Single(filesInfo, file =>
+                file.Url.EndsWith("/blob/file.zip/file_1"));
         }
 
         #endregion

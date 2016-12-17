@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "1.0.0-*",
   "dependencies": {
     "Microsoft.AspNetCore": "1.1.0",
@@ -7,13 +7,14 @@
     "Microsoft.AspNetCore.Server.IISIntegration": "1.1.0",
     "Microsoft.AspNetCore.Server.IISIntegration.Tools": "1.1.0-preview4-final",
     "Microsoft.AspNetCore.Server.Kestrel": "1.1.0",
+    "Microsoft.AspNetCore.StaticFiles": "1.1.0",
     "Microsoft.Extensions.Logging.Console": "1.1.0",
-    "WindowsAzure.Storage": "7.2.1" 
+    "WindowsAzure.Storage": "7.2.1"
   },
 
   "frameworks": {
     "netcoreapp1.1": {
-      "imports": [ "portable-net45+win8+wp8+wpa81" ],
+      "imports": [ "portable-net45+win8+wp8+wpa81" ], //Needed for "WindowsAzure.Storage"
       "dependencies": {
         "Microsoft.NETCore.App": {
           "type": "platform",

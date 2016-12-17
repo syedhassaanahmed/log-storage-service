@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 using Xunit;
 
@@ -43,7 +45,7 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public async Task UploadAsync_EmptyInnerFilesCollection_ThrowsArgumentNullException()
+        public async Task UploadAsync_EmptyMetaData_ThrowsArgumentNullException()
         {
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
@@ -57,16 +59,19 @@ namespace ValidationPipeline.LogStorage.Tests
         [Fact]
         public async Task UploadAsync_CorrectArchiveMultipleTimes_IsIdempotent()
         {
-            const string archiveFileName = "somefile.zip";
-
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 for (var i = 0; i < 5; i++)
                 {
                     // Act
-                    await _storageService.UploadAsync(archiveFileName, stream, new[] { "somefile.log" });
-                    var exists = await _storageService.ExistsAsync(archiveFileName);
+                    await _storageService.UploadAsync("somefile.zip", stream,
+                        new Dictionary<string, MetaData>
+                        {
+                            {"file_100", new MetaData()}
+                        });
+
+                    var exists = await _storageService.ExistsAsync("somefile.zip");
 
                     // Assert
                     Assert.True(exists);
@@ -83,7 +88,7 @@ namespace ValidationPipeline.LogStorage.Tests
         {
             // Assert
             await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
-                await _storageService.GetInnerFileNamesAsync(string.Empty));
+                await _storageService.GetMetaDataAsync(string.Empty));
         }
 
         [Fact]
@@ -100,13 +105,16 @@ namespace ValidationPipeline.LogStorage.Tests
         public async Task ExistsAsync_CorrectArchiveName_ReturnsTrue()
         {
             // Arrange
-            const string archiveFileName = "somefile.zip";
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                await _storageService.UploadAsync(archiveFileName, stream, new[] { "somefile.log" });
+                await _storageService.UploadAsync("somefile.zip", stream,
+                    new Dictionary<string, MetaData>
+                    {
+                        {"something", new MetaData()}
+                    });
 
                 // Act
-                var exists = await _storageService.ExistsAsync(archiveFileName);
+                var exists = await _storageService.ExistsAsync("somefile.zip");
 
                 // Assert
                 Assert.True(exists);
@@ -115,32 +123,75 @@ namespace ValidationPipeline.LogStorage.Tests
 
         #endregion
 
-        #region GetInnerFileNamesAsync
+        #region GetMetaDataAsync
 
         [Fact]
-        public async Task GetInnerFileNamesAsync_EmptyArchiveName_ThrowsArgumentNullException()
+        public async Task GetMetaDataAsync_EmptyArchiveName_ThrowsArgumentNullException()
         {
             // Assert
             await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
-                await _storageService.GetInnerFileNamesAsync(string.Empty));
+                await _storageService.GetMetaDataAsync(string.Empty));
         }
 
         [Fact]
-        public async Task GetInnerFileNamesAsync_CorrectArchiveName_ReturnsInnerFiles()
+        public async Task GetMetaDataAsync_CorrectArchiveName_ReturnsMetaData()
         {
             // Arrange
-            const string archiveFileName = "somefile.zip";
-            const string innerFileName = "somefile.log";
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                await _storageService.UploadAsync(archiveFileName, stream, new[] { innerFileName });
+                await _storageService.UploadAsync("somefile.zip", stream,
+                    new Dictionary<string, MetaData>
+                    {
+                        {"file_1", new MetaData()}
+                    });
 
                 // Act
-                var result = await _storageService.GetInnerFileNamesAsync(archiveFileName);
+                var metaData = await _storageService.GetMetaDataAsync("somefile.zip");
 
                 // Assert
-                Assert.NotNull(result);
-                Assert.Single(result, resultFileName => resultFileName == innerFileName);
+                Assert.NotNull(metaData);
+                Assert.Single(metaData, pair => pair.Key == "file_1");
+            }
+        }
+
+        #endregion
+
+        #region GetInnerFileMetaDataAsync
+
+        [Fact]
+        public async Task GetInnerFileMetaDataAsync_EmptyArchiveName_ThrowsArgumentNullException()
+        {
+            // Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
+                await _storageService.GetInnerFileMetaDataAsync(string.Empty, "something"));
+        }
+
+        [Fact]
+        public async Task GetInnerFileMetaDataAsync_EmptyInnerFileName_ThrowsArgumentNullException()
+        {
+            // Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
+                await _storageService.GetInnerFileMetaDataAsync("something", string.Empty));
+        }
+
+        [Fact]
+        public async Task GetInnerFileMetaDataAsync_CorrectArchiveName_ReturnsMetaData()
+        {
+            // Arrange
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
+            {
+                await _storageService.UploadAsync("somefile.zip", stream,
+                    new Dictionary<string, MetaData>
+                    {
+                        {"file_1", new MetaData {Name = "something"} }
+                    });
+
+                // Act
+                var metaData = await _storageService.GetInnerFileMetaDataAsync("somefile.zip", "file_1");
+
+                // Assert
+                Assert.NotNull(metaData);
+                Assert.Equal("something", metaData.Name);
             }
         }
 
@@ -160,22 +211,23 @@ namespace ValidationPipeline.LogStorage.Tests
         public async Task DownloadAsync_CorrectArchiveName_ReturnsStream()
         {
             // Arrange
-            const string archiveFileName = "somefile.zip";
-            const string expectedContent = "hello world";
-
             var encoding = Encoding.UTF8;
 
-            using (var uploadStream = new MemoryStream(encoding.GetBytes(expectedContent)))
+            using (var uploadStream = new MemoryStream(encoding.GetBytes("hello world")))
             {
-                await _storageService.UploadAsync(archiveFileName, uploadStream, new[] {"someinnerfile"});
+                await _storageService.UploadAsync("somefile.zip", uploadStream,
+                    new Dictionary<string, MetaData>
+                    {
+                        {"something", new MetaData()}
+                    });
 
                 // Act
-                var downloadStream = (MemoryStream)await _storageService.DownloadAsync(archiveFileName);
+                var downloadStream = (MemoryStream)await _storageService.DownloadAsync("somefile.zip");
                 var actualContent = encoding.GetString(downloadStream.ToArray());
 
                 // Assert
                 Assert.NotEqual(0, downloadStream.Length);
-                Assert.Equal(expectedContent, actualContent);
+                Assert.Equal("hello world", actualContent);
             }
         }
 
