@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +46,7 @@ namespace ValidationPipeline.LogStorage.Controllers
                     return new UnsupportedMediaTypeResult();
 
                 if (_archiveService.IsEmpty(stream))
-                    return BadRequest();
+                    return BadRequest($"{archiveFileName} is empty!");
 
                 var metaData = _archiveService.GetMetaData(stream).ToList();
 
@@ -64,13 +65,16 @@ namespace ValidationPipeline.LogStorage.Controllers
         {
             var exists = await _storageService.ExistsAsync(archiveFileName);
             if (!exists)
-                return NotFound();
+                return NotFound($"{archiveFileName} was not found!");
 
             var metaDictionary = await _storageService.GetMetaDataAsync(archiveFileName);
 
             // Select only metadata stored by us
             metaDictionary = metaDictionary.Where(entry => entry.Key.StartsWith(MetaDataKeyPrefix))
                 .ToDictionary(entry => entry.Key, entry => entry.Value);
+
+            if (!metaDictionary.Any())
+                return new StatusCodeResult((int)HttpStatusCode.InternalServerError);
 
             var archiveResponse = CreateArchiveResponse(archiveFileName, metaDictionary);
 
