@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using ValidationPipeline.LogStorage.Extensions;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
@@ -43,39 +44,50 @@ namespace ValidationPipeline.LogStorage.Controllers
             if (!_archiveService.IsEmpty(Request.Body))
                 return BadRequest();
 
-            var innerFileNames = _archiveService.GetInnerFileNames(Request.Body).ToList();
-            await _storageService.UploadAsync(archiveFileName, Request.Body, innerFileNames);
+            //Convert filename to valid path for static file download
+            archiveFileName = archiveFileName.Replace(".", "_");
+            var innerFileNames = _archiveService.GetInnerFileNames(Request.Body);
 
-            var filesInfo = CreateLogFilesInfo(innerFileNames);
-            return Created(Request.GetEncodedUrl(), filesInfo);
+            // Blob Storage Metadata Name only tolerates C# identifiers
+            // That's why we base64 encode file names before passing it to StorageService
+            var encodedFileNames = Base64Encode(innerFileNames).ToList();
+            await _storageService.UploadAsync(archiveFileName, Request.Body, encodedFileNames);
+
+            var archiveResponse = CreateArchiveResponse(archiveFileName, encodedFileNames);
+            return Created(Request.GetEncodedUrl(), archiveResponse);
         }
 
         [HttpGet("{archiveFileName}")]
         public async Task<IActionResult> GetInnerFilesInfoAsync(string archiveFileName)
         {
+            //Convert filename to valid path for static file download
+            archiveFileName = archiveFileName.Replace(".", "_");
+
             var exists = await _storageService.ExistsAsync(archiveFileName);
             if (!exists)
                 return NotFound();
 
             var innerFileNames = await _storageService.GetInnerFileNamesAsync(archiveFileName);
-            var filesInfo = CreateLogFilesInfo(innerFileNames);
+            var archiveResponse = CreateArchiveResponse(archiveFileName, innerFileNames);
 
-            return Ok(filesInfo);
+            return Ok(archiveResponse);
         }
 
         [HttpGet("{archiveFileName}/{innerFileName}")]
         public async Task<IActionResult> DownloadAsync(string archiveFileName, string innerFileName)
         {
-            var exists = await _storageService.ExistsAsync(archiveFileName);
+            var exists = await _storageService.InnerFileExistsAsync(archiveFileName, innerFileName);
             if (!exists)
                 return NotFound();
 
             var archiveStream = await _storageService.DownloadAsync(archiveFileName);
-            var innerFileStream = _archiveService.ExtractInnerFile(archiveStream, innerFileName);
+
+            var decodedFileName = innerFileName.FromBase64();
+            var innerFileStream = _archiveService.ExtractInnerFile(archiveStream, decodedFileName);
 
             return new FileStreamResult(innerFileStream, MediaTypeHeaderValue.Parse(BinaryContentType))
             {
-                FileDownloadName = innerFileName
+                FileDownloadName = decodedFileName
             };
         }
 
@@ -90,14 +102,21 @@ namespace ValidationPipeline.LogStorage.Controllers
                        StringComparison.OrdinalIgnoreCase);
         }
 
-        private IEnumerable<LogFileInfo> CreateLogFilesInfo(IEnumerable<string> innerFileNames)
+        private IEnumerable<ArchiveResponse> CreateArchiveResponse(string archiveFileName, 
+            IEnumerable<string> innerFileNames)
         {
-            var encodedUrl = Request.GetEncodedUrl();
+            var requestUri = new Uri(Request.GetEncodedUrl());
+            var baseUri = requestUri.OriginalString.Replace(requestUri.PathAndQuery, string.Empty);
 
-            return innerFileNames.Select(file => new LogFileInfo
+            return innerFileNames.Select(fileName => new ArchiveResponse
             {
-                Url = $"{encodedUrl}/{file}"
+                Url = $"{baseUri}{Startup.StaticFilesPath}/{archiveFileName}/{fileName}"
             });
+        }
+
+        private static IEnumerable<string> Base64Encode(IEnumerable<string> innerFileNames)
+        {
+            return innerFileNames.Select(fileName => fileName.ToBase64());
         }
 
         #endregion

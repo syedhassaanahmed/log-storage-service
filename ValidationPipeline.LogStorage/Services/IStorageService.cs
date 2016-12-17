@@ -10,6 +10,7 @@ namespace ValidationPipeline.LogStorage.Services
             IList<string> innerFileNames);
 
         Task<bool> ExistsAsync(string archiveFileName);
+        Task<bool> InnerFileExistsAsync(string archiveFileName, string innerFileName);
         Task<IEnumerable<string>> GetInnerFileNamesAsync(string archiveFileName);
         Task<Stream> DownloadAsync(string archiveFileName);
     }

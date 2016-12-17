@@ -13,6 +13,7 @@ namespace ValidationPipeline.LogStorage
 {
     public class Startup
     {
+        public const string StaticFilesPath = "/blob";
         private const string StorageConnectionStringKey = "BlobStorage:ConnectionString";
 
         public IConfigurationRoot Configuration { get; }
@@ -56,7 +57,7 @@ namespace ValidationPipeline.LogStorage
                 .UseStaticFiles(new StaticFileOptions
                 {
                     FileProvider = new LogStorageFileProvider(),
-                    RequestPath = new PathString("/blob")
+                    RequestPath = new PathString(StaticFilesPath)
                 }); ;
 
         }

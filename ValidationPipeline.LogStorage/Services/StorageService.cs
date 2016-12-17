@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -12,10 +11,7 @@ namespace ValidationPipeline.LogStorage.Services
     public class StorageService : IStorageService
     {
         private const string ContainerName = "validationpipeline";
-        private const string ZipContentType = "application/zip";
-
-        private const string FileNamesCountMetaDataKey = "FileNamesCount";
-        private const string FileNamesMetaDataKeyPrefix = "File";
+        private const string MetaDataKeyPrefix = "file_";
 
         private readonly CloudBlobContainer _blobContainer;
 
@@ -46,9 +42,7 @@ namespace ValidationPipeline.LogStorage.Services
                 throw new ArgumentNullException(nameof(innerFileNames));
 
             var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
-            blockBlob.Properties.ContentType = ZipContentType;
-
-            StoreInnerFileNamesInMetaData(innerFileNames, blockBlob);
+            StoreMetaData(innerFileNames, blockBlob);
 
             await blockBlob.UploadFromStreamAsync(archiveStream);
         }
@@ -62,6 +56,21 @@ namespace ValidationPipeline.LogStorage.Services
             return await blob.ExistsAsync();
         }
 
+        public async Task<bool> InnerFileExistsAsync(string archiveFileName, string innerFileName)
+        {
+            var archiveExists = await ExistsAsync(archiveFileName);
+            if (!archiveExists)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(innerFileName))
+                throw new ArgumentNullException(nameof(innerFileName));
+
+            var blob = _blobContainer.GetBlobReference(archiveFileName);
+            await blob.FetchAttributesAsync();
+
+            return blob.Metadata.ContainsKey(MetaDataKeyPrefix + innerFileName);
+        }
+
         public async Task<IEnumerable<string>> GetInnerFileNamesAsync(string archiveFileName)
         {
             if(string.IsNullOrWhiteSpace(archiveFileName))
@@ -69,7 +78,7 @@ namespace ValidationPipeline.LogStorage.Services
 
             var blob = _blobContainer.GetBlobReference(archiveFileName);
             await blob.FetchAttributesAsync();
-            return RetrieveInnerFileNamesFromMetaData(blob);
+            return RetrieveMetaData(blob);
         }
 
         public async Task<Stream> DownloadAsync(string archiveFileName)
@@ -88,34 +97,22 @@ namespace ValidationPipeline.LogStorage.Services
 
         #region Helpers
 
-        private static void StoreInnerFileNamesInMetaData(ICollection<string> innerFileNames, CloudBlob blockBlob)
+        private static void StoreMetaData(IEnumerable<string> innerFileNames, CloudBlob blockBlob)
         {
-            blockBlob.Metadata.Add(FileNamesCountMetaDataKey, innerFileNames.Count.ToString());
             foreach (var innerFileName in innerFileNames)
             {
-                // MetaData Key Name follows C# identifiers convention
-                // Hence we can't directly store file names in Key
-
-                var encodedFileName = Convert.ToBase64String(Encoding.UTF8.GetBytes(innerFileName));
-                blockBlob.Metadata.Add(encodedFileName, innerFileName);
+                blockBlob.Metadata.Add(MetaDataKeyPrefix + innerFileName, innerFileName);
             }
         }
 
-        private static IEnumerable<string> RetrieveInnerFileNamesFromMetaData(CloudBlob blockBlob)
+        private static IEnumerable<string> RetrieveMetaData(CloudBlob blockBlob)
         {
             if (blockBlob.Metadata.Count == 0)
                 return Enumerable.Empty<string>();
 
-            var innerFileNamesCount = Convert.ToInt32(blockBlob.Metadata[FileNamesCountMetaDataKey]);
-
-            var innerFileNames = new List<string>();
-            for (var i = 0; i < innerFileNamesCount; i++)
-            {
-                var innerFileName = blockBlob.Metadata[$"{FileNamesMetaDataKeyPrefix}{i}"];
-                innerFileNames.Add(innerFileName);
-            }
-
-            return innerFileNames;
+            return blockBlob.Metadata.Keys
+                .Where(key => key.StartsWith(MetaDataKeyPrefix))
+                .Select(key => key.Replace(MetaDataKeyPrefix, string.Empty));
         }
 
         #endregion

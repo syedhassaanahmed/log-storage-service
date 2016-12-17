@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using ValidationPipeline.LogStorage.Extensions;
 using ValidationPipeline.LogStorage.Services;
 using Xunit;
 
@@ -65,7 +66,9 @@ namespace ValidationPipeline.LogStorage.Tests
                 for (var i = 0; i < 5; i++)
                 {
                     // Act
-                    await _storageService.UploadAsync(archiveFileName, stream, new[] { "somefile.log" });
+                    await _storageService.UploadAsync(archiveFileName, stream, 
+                        new[] { "somefile.log".ToBase64() });
+
                     var exists = await _storageService.ExistsAsync(archiveFileName);
 
                     // Assert
@@ -103,7 +106,8 @@ namespace ValidationPipeline.LogStorage.Tests
             const string archiveFileName = "somefile.zip";
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
-                await _storageService.UploadAsync(archiveFileName, stream, new[] { "somefile.log" });
+                await _storageService.UploadAsync(archiveFileName, stream, 
+                    new[] {"somefile.log".ToBase64()});
 
                 // Act
                 var exists = await _storageService.ExistsAsync(archiveFileName);
@@ -130,7 +134,7 @@ namespace ValidationPipeline.LogStorage.Tests
         {
             // Arrange
             const string archiveFileName = "somefile.zip";
-            const string innerFileName = "somefile.log";
+            var innerFileName = "somefile.log".ToBase64();
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 await _storageService.UploadAsync(archiveFileName, stream, new[] { innerFileName });

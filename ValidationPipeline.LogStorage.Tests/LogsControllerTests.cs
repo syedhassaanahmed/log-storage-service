@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -12,6 +13,7 @@ using Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NSubstitute;
+using ValidationPipeline.LogStorage.Extensions;
 using ValidationPipeline.LogStorage.Models;
 
 namespace ValidationPipeline.LogStorage.Tests
@@ -148,13 +150,14 @@ namespace ValidationPipeline.LogStorage.Tests
                 // Act
                 var response = await _client.PutAsync(route, streamContent);
                 var responseString = await response.Content.ReadAsStringAsync();
-                var filesInfo = JsonConvert.DeserializeObject<List<LogFileInfo>>(responseString);
+                var filesInfo = JsonConvert.DeserializeObject<List<ArchiveResponse>>(responseString);
+                var base64FileName = Convert.ToBase64String(Encoding.UTF8.GetBytes(innerFileName));
 
                 // Assert
                 Assert.Equal(HttpStatusCode.Created, response.StatusCode);
                 Assert.Equal(route, response.Headers.Location.PathAndQuery);
                 Assert.Single(filesInfo, file => 
-                    file.Url.EndsWith($"{route}/{innerFileName}"));
+                    file.Url.EndsWith($"{archiveFileName.Replace(".", "_")}/{base64FileName}"));
             }
         }
 
@@ -176,7 +179,7 @@ namespace ValidationPipeline.LogStorage.Tests
         public async Task GetInnerFilesInfoAsync_CorrectArchiveFileName_ReturnsOkWithLogFilesInfo()
         {
             // Arrange
-            const string innerFileName = "somefile.log";
+            var innerFileName = "somefile.log".ToBase64();
 
             _mockStorageService.ExistsAsync(Arg.Any<string>()).Returns(true);
             _mockStorageService.GetInnerFileNamesAsync(Arg.Any<string>())
@@ -188,52 +191,18 @@ namespace ValidationPipeline.LogStorage.Tests
             // Act
             var response = await _client.GetAsync(route);
             var responseString = await response.Content.ReadAsStringAsync();
-            var filesInfo = JsonConvert.DeserializeObject<List<LogFileInfo>>(responseString);
+            var filesInfo = JsonConvert.DeserializeObject<List<ArchiveResponse>>(responseString);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Single(filesInfo, file => file.Url.EndsWith($"{route}/{innerFileName}"));
+            Assert.Single(filesInfo, file =>
+                file.Url.EndsWith($"{archiveFileName.Replace(".", "_")}/{innerFileName}"));
         }
 
         #endregion
 
         #region DownloadAsync
 
-        [Fact]
-        public async Task DownloadAsync_IncorrectArchiveName_ReturnsNotFound()
-        {
-            // Act
-            var response = await _client.GetAsync("/api/logs/file.zip/log.txt");
-
-            // Assert
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        }
-
-        [Fact]
-        public async Task DownloadAsync_CorrectArchiveName_ReturnsOkWithFileContent()
-        {
-            // Arrange
-            const string archiveFileName = "file.zip";
-            const string innerFileName = "somefile.log";
-            const string expectedContent = "hello world";
-
-            _mockStorageService.ExistsAsync(Arg.Any<string>()).Returns(true);
-            _mockArchiveService.ExtractInnerFile(Arg.Any<Stream>(), Arg.Any<string>())
-                .Returns(new MemoryStream(Encoding.UTF8.GetBytes(expectedContent)));
-            
-            var route = $"/api/logs/{archiveFileName}/{innerFileName}";
-
-            // Act
-            var response = await _client.GetAsync(route);
-            var actualContent = await response.Content.ReadAsStringAsync();
-            
-            // Assert
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(response.Content.Headers.ContentType, 
-                MediaTypeHeaderValue.Parse("application/octet-stream"));
-
-            Assert.Equal(expectedContent, actualContent);
-        }
 
         #endregion
     }
