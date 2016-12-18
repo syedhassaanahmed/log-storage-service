@@ -91,9 +91,9 @@ namespace ValidationPipeline.LogStorage
             {
                 FileProvider = app.ApplicationServices.GetService<IFileProvider>(),
 
-                // TODO: This is a security risk!!!
-                // Replace this with FileExtensionContentTypeProvider 
-                // once inner file extensions are known
+                // TODO: Enabling ServeUnknownFileTypes is a security risk and using it is discouraged. 
+                // FileExtensionContentTypeProvider provides a safer alternative to serving files 
+                // with non-standard extensions.
                 ServeUnknownFileTypes = true,
 
                 RequestPath = new PathString(CommonConstants.StaticFilesPath),
