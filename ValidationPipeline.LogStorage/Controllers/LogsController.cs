@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
@@ -19,12 +20,14 @@ namespace ValidationPipeline.LogStorage.Controllers
 
         private readonly IArchiveService _archiveService;
         private readonly IStorageService _storageService;
+        private readonly IOptions<CdnOptions> _cdnOptions;
 
-        public LogsController(IArchiveService archiveService, 
-            IStorageService storageService)
+        public LogsController(IArchiveService archiveService, IStorageService storageService,
+            IOptions<CdnOptions> cdnOptions)
         {
             _archiveService = archiveService;
             _storageService = storageService;
+            _cdnOptions = cdnOptions;
         }
 
         #region API Methods
@@ -97,12 +100,9 @@ namespace ValidationPipeline.LogStorage.Controllers
         private IEnumerable<ArchiveResponse> CreateArchiveResponse(string archiveFileName,
             IDictionary<string, MetaData> metaDictionary)
         {
-            var requestUri = new Uri(Request.GetEncodedUrl());
-            var baseUri = requestUri.OriginalString.Replace(requestUri.PathAndQuery, string.Empty);
-
             return metaDictionary.Select(entry => new ArchiveResponse
             {
-                Url = $"{baseUri}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}",
+                Url = $"{_cdnOptions.Value.EdgeUrl}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}",
                 Bytes = entry.Value.Length
             });
         }

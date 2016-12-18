@@ -44,7 +44,8 @@ namespace ValidationPipeline.LogStorage
                 });
 
             services.AddOptions()
-                .Configure<BlobStorageOptions>(Configuration.GetSection("BlobStorage"));
+                .Configure<BlobStorageOptions>(Configuration.GetSection("BlobStorage"))
+                .Configure<CdnOptions>(Configuration.GetSection("Cdn"));
 
             services.TryAddTransient<IArchiveService, ArchiveService>();
             services.TryAddTransient<IStorageService, StorageService>();
