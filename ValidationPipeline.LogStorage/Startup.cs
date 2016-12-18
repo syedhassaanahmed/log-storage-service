@@ -18,7 +18,7 @@ namespace ValidationPipeline.LogStorage
     public class Startup
     {
         private const string StaticFilesCacheMaxAgeKey = "StaticFiles:CacheMaxAgeSeconds";
-        private const string ControllerCacheDurationKey = "StaticFiles:CacheDurationMinutes";
+        private const string ControllerCacheDurationKey = "Controller:CacheDurationMinutes";
 
         public IConfigurationRoot Configuration { get; }
 
