@@ -9,14 +9,13 @@ namespace ValidationPipeline.LogStorage.Tests
 {
     public class LogStorageFileProviderTests
     {
-        private readonly IArchiveService _archiveService = Substitute.For<IArchiveService>();
         private readonly IStorageService _storageService = Substitute.For<IStorageService>();
 
         private readonly IFileProvider _fileProvider;
 
         public LogStorageFileProviderTests()
         {
-            _fileProvider = new LogStorageFileProvider(_archiveService, _storageService);
+            _fileProvider = new LogStorageFileProvider(_storageService);
         }
 
         [Fact]

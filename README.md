@@ -20,8 +20,8 @@ An automated test framework is used to run tens of thousands of tests per week, 
 - `PUT` is preferred over `POST` due to its idempotence. (e.g [OneDrive](https://dev.onedrive.com/items/upload_put.htm))
 - `ContentType` is limited to `application/zip`. Can be easily changed/extended.
 - Its anticipated that more writes will happen than reads, hence zip is directly being put in blob storage
-- Each blob has associated metadata which is information about inner files (name, length, lastModified)
+- Each blob has associated metadata which is information about inner files (`name`, `length`, `lastModified`)
 - Upload file size is handled on `IIS` level (`maxAllowedContentLength` is currently set to [60MB](https://docs.microsoft.com/en-us/azure/azure-subscription-service-limits#storage-limits) in `Web.config`)
-- For downloading we use `ASP.NET Core`'s Static Files Middleware. This way we get some functionality for free.
+- For downloading we use `ASP.NET Core`'s [Static Files Middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/static-files). This way we get some functionality for free.
 - `Blob Storage` request options can be changed on the fly without having to reboot the server.
 - Controllers are tested using `TestHost` so that routes and request headers can also be tested.

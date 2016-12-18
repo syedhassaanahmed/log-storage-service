@@ -47,13 +47,13 @@ namespace ValidationPipeline.LogStorage.Controllers
                 // Request.Body can only move forward once
                 Request.Body.CopyTo(stream);
 
-                if (!_archiveService.IsValid(stream))
+                if (!_archiveService.Initialize(stream))
                     return new UnsupportedMediaTypeResult();
 
-                if (_archiveService.IsEmpty(stream))
+                if (_archiveService.IsEmpty())
                     return BadRequest($"{archiveFileName} is empty!");
 
-                var metaData = _archiveService.GetMetaData(stream).ToList();
+                var metaData = _archiveService.GetMetaData().ToList();
 
                 // Blob Storage Metadata Name only tolerates C# identifiers
                 // That's why we create our own name before passing it to StorageService

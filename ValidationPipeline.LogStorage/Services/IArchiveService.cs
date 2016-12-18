@@ -6,9 +6,9 @@ namespace ValidationPipeline.LogStorage.Services
 {
     public interface IArchiveService
     {
-        bool IsValid(Stream archiveStream);
-        bool IsEmpty(Stream archiveStream);
-        IEnumerable<MetaData> GetMetaData(Stream archiveStream);
-        Stream ExtractInnerFile(Stream archiveStream, string innerFileName);
+        bool Initialize(Stream archiveStream);
+        bool IsEmpty();
+        IEnumerable<MetaData> GetMetaData();
+        Stream ExtractInnerFile(string innerFileName);
     }
 }

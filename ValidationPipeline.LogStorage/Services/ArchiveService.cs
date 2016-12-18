@@ -8,9 +8,11 @@ using ValidationPipeline.LogStorage.Models;
 
 namespace ValidationPipeline.LogStorage.Services
 {
-    public class ArchiveService : IArchiveService
+    public class ArchiveService : IArchiveService, IDisposable
     {
-        public bool IsValid(Stream archiveStream)
+        private ZipArchive _zipArchive;
+
+        public bool Initialize(Stream archiveStream)
         {
             if (archiveStream == null || archiveStream == Stream.Null)
                 throw new ArgumentNullException(nameof(archiveStream));
@@ -19,10 +21,8 @@ namespace ValidationPipeline.LogStorage.Services
 
             try
             {
-                using (new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
-                {
-                    return true;
-                }
+                _zipArchive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true);
+                return true;
             }
             catch (InvalidDataException e)
             {
@@ -31,51 +31,41 @@ namespace ValidationPipeline.LogStorage.Services
             }
         }
 
-        public bool IsEmpty(Stream archiveStream)
+        public bool IsEmpty()
         {
-            if (archiveStream == null || archiveStream == Stream.Null)
-                throw new ArgumentNullException(nameof(archiveStream));
+            if (_zipArchive == null)
+                throw new ArgumentException("Archive Service was not initialized!");
 
-            archiveStream.Position = 0;
-
-            using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
-            {
-                return archive.Entries.Count == 0;
-            }
+            return _zipArchive.Entries.Count == 0;
         }
 
-        public IEnumerable<MetaData> GetMetaData(Stream archiveStream)
+        public IEnumerable<MetaData> GetMetaData()
         {
-            if (archiveStream == null || archiveStream == Stream.Null)
-                throw new ArgumentNullException(nameof(archiveStream));
+            if (_zipArchive == null)
+                throw new ArgumentException("Archive Service was not initialized!");
 
-            archiveStream.Position = 0;
-
-            using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
+            return _zipArchive.Entries.Select(entry => new MetaData
             {
-                return archive.Entries.Select(entry => new MetaData
-                {
-                    Name = entry.Name,
-                    Length = entry.Length,
-                    LastModified = entry.LastWriteTime
-                });
-            }
+                Name = entry.Name,
+                Length = entry.Length,
+                LastModified = entry.LastWriteTime
+            });
         }
 
-        public Stream ExtractInnerFile(Stream archiveStream, string innerFileName)
+        public Stream ExtractInnerFile(string innerFileName)
         {
-            if (archiveStream == null || archiveStream == Stream.Null)
-                throw new ArgumentNullException(nameof(archiveStream));
+            if (_zipArchive == null)
+                throw new ArgumentException("Archive Service was not initialized!");
 
             if (string.IsNullOrWhiteSpace(innerFileName))
                 throw new ArgumentNullException(nameof(innerFileName));
 
-            archiveStream.Position = 0;
+            return _zipArchive.GetEntry(innerFileName)?.Open();
+        }
 
-            using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, true))
-            {
-                return archive.GetEntry(innerFileName)?.Open();
-            }
+        public void Dispose()
+        {
+            _zipArchive?.Dispose();
         }
     }
 }

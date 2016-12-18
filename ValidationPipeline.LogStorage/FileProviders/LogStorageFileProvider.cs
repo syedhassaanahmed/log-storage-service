@@ -1,19 +1,19 @@
 ﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
+using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
 namespace ValidationPipeline.LogStorage.FileProviders
 {
     public class LogStorageFileProvider : IFileProvider
     {
-        private readonly IArchiveService _archiveService;
         private readonly IStorageService _storageService;
 
-        public LogStorageFileProvider(IArchiveService archiveService, 
-            IStorageService storageService)
+        public LogStorageFileProvider(IStorageService storageService)
         {
-            _archiveService = archiveService;
             _storageService = storageService;
         }
 
@@ -36,16 +36,24 @@ namespace ValidationPipeline.LogStorage.FileProviders
             if(metaData == null)
                 return new NotFoundFileInfo(innerFileName);
 
-            return new LogStorageFileInfo(async () =>
-            {
-                var archiveStream = await _storageService.DownloadAsync(archiveFileName);
-                return _archiveService.ExtractInnerFile(archiveStream, metaData.Name);
-            })
+            return new LogStorageFileInfo(async () => 
+                await ExtractInnerFileAsync(archiveFileName, metaData))
             {
                 Name = metaData.Name,
                 Length = metaData.Length,
                 LastModified = metaData.LastModified
             };
+        }
+
+        private async Task<Stream> ExtractInnerFileAsync(string archiveFileName, MetaData metaData)
+        {
+            var archiveStream = await _storageService.DownloadAsync(archiveFileName);
+
+            using (var archiveService = new ArchiveService())
+            {
+                archiveService.Initialize(archiveStream);
+                return archiveService.ExtractInnerFile(metaData.Name);
+            }
         }
 
         public IDirectoryContents GetDirectoryContents(string subpath)

@@ -96,7 +96,7 @@ namespace ValidationPipeline.LogStorage.Tests
         public async Task UploadAsync_NonZipFileWithZipContentType_ReturnsUnsupportedMediaType()
         {
             // Arrange
-            _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(false);
+            _mockArchiveService.Initialize(Arg.Any<Stream>()).Returns(false);
 
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
@@ -121,8 +121,8 @@ namespace ValidationPipeline.LogStorage.Tests
         public async Task UploadAsync_EmptyZipFile_ReturnsBadRequest()
         {
             // Arrange
-            _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
-            _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(true);
+            _mockArchiveService.Initialize(Arg.Any<Stream>()).Returns(true);
+            _mockArchiveService.IsEmpty().Returns(true);
 
             using (var stream = File.Open($"{TestDataPath}/empty.zip", 
                 FileMode.Open, FileAccess.Read))
@@ -148,9 +148,9 @@ namespace ValidationPipeline.LogStorage.Tests
         public async Task UploadAsync_ZipFile_ReturnsCreatedWithLogFilesInfo()
         {
             // Arrange
-            _mockArchiveService.IsValid(Arg.Any<Stream>()).Returns(true);
-            _mockArchiveService.IsEmpty(Arg.Any<Stream>()).Returns(false);
-            _mockArchiveService.GetMetaData(Arg.Any<Stream>())
+            _mockArchiveService.Initialize(Arg.Any<Stream>()).Returns(true);
+            _mockArchiveService.IsEmpty().Returns(false);
+            _mockArchiveService.GetMetaData()
                 .Returns(new[] {new MetaData {Name = "somefile.log" } });
 
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 

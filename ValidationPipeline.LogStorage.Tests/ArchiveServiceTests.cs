@@ -12,24 +12,24 @@ namespace ValidationPipeline.LogStorage.Tests
         private const string TestDataPath = "TestData/ArchiveServiceTests";
         private readonly IArchiveService _archiveService = new ArchiveService();
 
-        #region IsValid
+        #region Initialize
 
         [Fact]
-        public void IsValid_StreamNull_ThrowsArgumentNullException()
+        public void Initialize_StreamNull_ThrowsArgumentNullException()
         {
             // Assert
             Assert.Throws<ArgumentNullException>(() => // Act
-                _archiveService.IsValid(null));
+                _archiveService.Initialize(null));
         }
 
         [Fact]
-        public void IsValid_Stream_RemainsOpen()
+        public void Initialize_Stream_RemainsOpen()
         {
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 // Act
-                _archiveService.IsValid(stream);
+                _archiveService.Initialize(stream);
 
                 // Assert
                 Assert.True(stream.CanRead);
@@ -37,7 +37,7 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
-        public void IsValid_StreamPositionNotZero_DoesNotThrowException()
+        public void Initialize_StreamPositionNotZero_DoesNotThrowException()
         {
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
@@ -45,36 +45,36 @@ namespace ValidationPipeline.LogStorage.Tests
                 stream.Position = stream.Length - 1;
 
                 // Act
-                _archiveService.IsValid(stream);
+                _archiveService.Initialize(stream);
             }
         }
 
         [Fact]
-        public void IsValid_IncorrectFileFormat_ReturnsFalse()
+        public void Initialize_IncorrectFileFormat_ReturnsFalse()
         {
             // Arrange
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
             {
                 // Act
-                var isValid = _archiveService.IsValid(stream);
+                var initialized = _archiveService.Initialize(stream);
 
                 // Assert
-                Assert.False(isValid);
+                Assert.False(initialized);
             }
         }
 
         [Fact]
-        public void IsValid_CorrectFileFormat_ReturnsTrue()
+        public void Initialize_CorrectFileFormat_ReturnsTrue()
         {
             // Arrange
             using (var stream = File.Open($"{TestDataPath}/empty.zip", 
                 FileMode.Open, FileAccess.Read))
             {
                 // Act
-                var isValid = _archiveService.IsValid(stream);
+                var initialized = _archiveService.Initialize(stream);
 
                 // Assert
-                Assert.True(isValid);
+                Assert.True(initialized);
             }
         }
 
@@ -83,11 +83,11 @@ namespace ValidationPipeline.LogStorage.Tests
         #region IsEmpty
 
         [Fact]
-        public void IsEmpty_StreamNull_ThrowsArgumentNullException()
+        public void IsEmpty_Uninitialized_ThrowsArgumentException()
         {
             // Assert
-            Assert.Throws<ArgumentNullException>(() => // Act
-                _archiveService.IsEmpty(null));
+            Assert.Throws<ArgumentException>(() => // Act
+                _archiveService.IsEmpty());
         }
 
         [Fact]
@@ -97,8 +97,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                _archiveService.IsEmpty(stream);
+                _archiveService.IsEmpty();
 
                 // Assert
                 Assert.True(stream.CanRead);
@@ -113,9 +115,10 @@ namespace ValidationPipeline.LogStorage.Tests
                 FileMode.Open, FileAccess.Read))
             {
                 stream.Position = stream.Length - 1;
+                _archiveService.Initialize(stream);
 
                 // Act
-                _archiveService.IsEmpty(stream);
+                _archiveService.IsEmpty();
             }
         }
 
@@ -126,8 +129,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                var isEmpty = _archiveService.IsEmpty(stream);
+                var isEmpty = _archiveService.IsEmpty();
 
                 // Assert
                 Assert.False(isEmpty);
@@ -141,8 +146,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/empty.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                var isEmpty = _archiveService.IsEmpty(stream);
+                var isEmpty = _archiveService.IsEmpty();
 
                 // Assert
                 Assert.True(isEmpty);
@@ -154,11 +161,11 @@ namespace ValidationPipeline.LogStorage.Tests
         #region GetMetaData
 
         [Fact]
-        public void GetMetaData_StreamNull_ThrowsArgumentNullException()
+        public void GetMetaData_Uninitialized_ThrowsArgumentException()
         {
             // Assert
-            Assert.Throws<ArgumentNullException>(() => // Act
-                _archiveService.GetMetaData(null));
+            Assert.Throws<ArgumentException>(() => // Act
+                _archiveService.GetMetaData());
         }
 
         [Fact]
@@ -168,8 +175,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                _archiveService.GetMetaData(stream);
+                _archiveService.GetMetaData();
 
                 // Assert
                 Assert.True(stream.CanRead);
@@ -184,9 +193,10 @@ namespace ValidationPipeline.LogStorage.Tests
                 FileMode.Open, FileAccess.Read))
             {
                 stream.Position = stream.Length - 1;
+                _archiveService.Initialize(stream);
 
                 // Act
-                _archiveService.GetMetaData(stream);
+                _archiveService.GetMetaData();
             }
         }
 
@@ -197,8 +207,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                var result = _archiveService.GetMetaData(stream);
+                var result = _archiveService.GetMetaData();
 
                 // Assert
                 Assert.Equal(3, result.Count());
@@ -212,8 +224,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/empty.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                var result = _archiveService.GetMetaData(stream);
+                var result = _archiveService.GetMetaData();
 
                 // Assert
                 Assert.Empty(result);
@@ -225,22 +239,25 @@ namespace ValidationPipeline.LogStorage.Tests
         #region ExtractFile
 
         [Fact]
-        public void ExtractFile_StreamNull_ThrowsArgumentNullException()
+        public void ExtractFile_Uninitialized_ThrowsArgumentException()
         {
             // Assert
-            Assert.Throws<ArgumentNullException>(() => // Act
-                _archiveService.ExtractInnerFile(null, "file.zip"));
+            Assert.Throws<ArgumentException>(() => // Act
+                _archiveService.ExtractInnerFile("file.zip"));
         }
 
         [Fact]
         public void ExtractFile_EmptyFileName_ThrowsArgumentNullException()
         {
             // Arrange
-            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("hello world")))
+            using (var stream = File.Open($"{TestDataPath}/20161215.zip",
+                FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Assert
                 Assert.Throws<ArgumentNullException>(() => // Act
-                    _archiveService.ExtractInnerFile(stream, string.Empty));
+                    _archiveService.ExtractInnerFile(string.Empty));
             }
         }
 
@@ -251,8 +268,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                _archiveService.ExtractInnerFile(stream, "something");
+                _archiveService.ExtractInnerFile("something");
 
                 // Assert
                 Assert.True(stream.CanRead);
@@ -267,9 +286,10 @@ namespace ValidationPipeline.LogStorage.Tests
                 FileMode.Open, FileAccess.Read))
             {
                 stream.Position = stream.Length - 1;
+                _archiveService.Initialize(stream);
 
                 // Act
-                _archiveService.ExtractInnerFile(stream, "something");
+                _archiveService.ExtractInnerFile("something");
             }
         }
 
@@ -280,8 +300,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                var resultStream = _archiveService.ExtractInnerFile(stream, "something");
+                var resultStream = _archiveService.ExtractInnerFile("something");
 
                 // Assert
                 Assert.Null(resultStream);
@@ -295,8 +317,10 @@ namespace ValidationPipeline.LogStorage.Tests
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
                 FileMode.Open, FileAccess.Read))
             {
+                _archiveService.Initialize(stream);
+
                 // Act
-                var resultStream = _archiveService.ExtractInnerFile(stream, "20161215T100001.log");
+                var resultStream = _archiveService.ExtractInnerFile("20161215T100001.log");
 
                 // Assert
                 Assert.NotNull(resultStream);
