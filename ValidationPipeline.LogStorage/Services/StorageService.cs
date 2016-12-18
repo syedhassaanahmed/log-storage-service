@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
@@ -32,15 +33,6 @@ namespace ValidationPipeline.LogStorage.Services
                 GetLatestRequestOptions(), new OperationContext()).Wait();
         }
 
-        private BlobRequestOptions GetLatestRequestOptions()
-        {
-            return new BlobRequestOptions
-            {
-                SingleBlobUploadThresholdInBytes = _options.Value.SingleBlobUploadThresholdInBytes,
-                ParallelOperationThreadCount = _options.Value.ParallelOperationThreadCount
-            };
-        }
-
         #region IStorageService Implementation
 
         public async Task UploadAsync(string archiveFileName, Stream archiveStream,
@@ -60,7 +52,8 @@ namespace ValidationPipeline.LogStorage.Services
             blockBlob.Metadata.AddRange(metaData.ToDictionary(
                 entry => entry.Key, entry => JsonConvert.SerializeObject(entry.Value)));
 
-            archiveStream.Position = 0;
+            blockBlob.Properties.ContentType = CommonConstants.ZipContentType;
+            blockBlob.Properties.ContentMD5 = ComputeContentMd5(archiveStream);
 
             await blockBlob.UploadFromStreamAsync(archiveStream, 
                 AccessCondition.GenerateEmptyCondition(),
@@ -82,8 +75,7 @@ namespace ValidationPipeline.LogStorage.Services
                 throw new ArgumentNullException(nameof(archiveFileName));
 
             var blob = _blobContainer.GetBlobReference(archiveFileName);
-            await blob.FetchAttributesAsync(AccessCondition.GenerateEmptyCondition(), 
-                GetLatestRequestOptions(), new OperationContext());
+            await FetchAttributesAsync(blob);
 
             return blob.Metadata.ToDictionary(entry => entry.Key,
                 entry => JsonConvert.DeserializeObject<MetaData>(entry.Value));
@@ -99,8 +91,7 @@ namespace ValidationPipeline.LogStorage.Services
                 throw new ArgumentNullException(nameof(innerFileName));
 
             var blob = _blobContainer.GetBlobReference(archiveFileName);
-            await blob.FetchAttributesAsync(AccessCondition.GenerateEmptyCondition(),
-                GetLatestRequestOptions(), new OperationContext());
+            await FetchAttributesAsync(blob);
 
             return blob.Metadata.ContainsKey(innerFileName) ? 
                 JsonConvert.DeserializeObject<MetaData>(blob.Metadata[innerFileName]) : null;
@@ -117,7 +108,43 @@ namespace ValidationPipeline.LogStorage.Services
             await blockBlob.DownloadToStreamAsync(memoryStream, AccessCondition.GenerateEmptyCondition(),
                 GetLatestRequestOptions(), new OperationContext());
 
+            if (ComputeContentMd5(memoryStream) != blockBlob.Properties.ContentMD5)
+                throw new InvalidDataException($"{archiveFileName} is corrupt!");
+
             return memoryStream;
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private BlobRequestOptions GetLatestRequestOptions()
+        {
+            return new BlobRequestOptions
+            {
+                SingleBlobUploadThresholdInBytes = _options.Value.SingleBlobUploadThresholdInBytes,
+                ParallelOperationThreadCount = _options.Value.ParallelOperationThreadCount
+            };
+        }
+
+        private async Task FetchAttributesAsync(CloudBlob blob)
+        {
+            await blob.FetchAttributesAsync(AccessCondition.GenerateEmptyCondition(),
+                GetLatestRequestOptions(), new OperationContext());
+        }
+
+        private static string ComputeContentMd5(Stream stream)
+        {
+            stream.Position = 0;
+
+            using (var md5 = MD5.Create())
+            {
+                md5.Initialize();
+                var bytes = md5.ComputeHash(stream);
+
+                stream.Position = 0;
+                return Convert.ToBase64String(bytes);
+            }
         }
 
         #endregion
