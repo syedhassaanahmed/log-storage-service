@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
@@ -17,13 +18,15 @@ namespace ValidationPipeline.LogStorage.Services
 
         private readonly CloudBlobContainer _blobContainer;
 
-        public StorageService(string connectionString)
+        public StorageService(IOptions<BlobStorageOptions> options)
         {
-            if (string.IsNullOrWhiteSpace(connectionString))
-                throw new ArgumentNullException(nameof(connectionString));
-
-            var storageAccount = CloudStorageAccount.Parse(connectionString);
+            var storageAccount = CloudStorageAccount.Parse(options.Value.ConnectionString);
             var blobClient = storageAccount.CreateCloudBlobClient();
+
+            blobClient.DefaultRequestOptions = new BlobRequestOptions
+            {
+                ParallelOperationThreadCount = options.Value.ParallelOperationThreadCount
+            };
 
             _blobContainer = blobClient.GetContainerReference(ContainerName);
             _blobContainer.CreateIfNotExistsAsync().Wait();

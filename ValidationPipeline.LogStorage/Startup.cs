@@ -10,13 +10,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
 using ValidationPipeline.LogStorage.FileProviders;
+using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
 namespace ValidationPipeline.LogStorage
 {
     public class Startup
     {
-        private const string StorageConnectionStringKey = "BlobStorage:ConnectionString";
         private const string StaticFilesCacheMaxAgeKey = "StaticFiles:CacheMaxAgeSeconds";
         private const string ControllerCacheDurationKey = "StaticFiles:CacheDurationMinutes";
 
@@ -43,11 +43,11 @@ namespace ValidationPipeline.LogStorage
                         new CamelCasePropertyNamesContractResolver();
                 });
 
-            var connectionString = Configuration.GetValue<string>(StorageConnectionStringKey);
+            services.AddOptions()
+                .Configure<BlobStorageOptions>(Configuration.GetSection("BlobStorage"));
 
             services.TryAddTransient<IArchiveService, ArchiveService>();
-            services.TryAddTransient<IStorageService>(serviceProvider =>
-                    new StorageService(connectionString));
+            services.TryAddTransient<IStorageService, StorageService>();
 
             services.TryAddTransient<IFileProvider, LogStorageFileProvider>();
         }

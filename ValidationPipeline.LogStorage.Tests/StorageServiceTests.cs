@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 using Xunit;
@@ -14,16 +15,17 @@ namespace ValidationPipeline.LogStorage.Tests
     /// </summary>
     public class StorageServiceTests
     {
-        private const string TestConnectionString = "UseDevelopmentStorage=true";
+        private readonly IStorageService _storageService;
 
-        private readonly IStorageService _storageService = new StorageService(TestConnectionString);
-
-        [Fact]
-        public void Constructor_EmptyConnectionString_ThrowsArgumentNullException()
+        public StorageServiceTests()
         {
-            // Assert
-            Assert.Throws<ArgumentNullException>(() => // Act
-                new StorageService(string.Empty));
+            var options = Options.Create(new BlobStorageOptions
+            {
+                ConnectionString = "UseDevelopmentStorage=true",
+                ParallelOperationThreadCount = 4
+            });
+
+            _storageService = new StorageService(options);
         }
 
         #region UploadAsync
