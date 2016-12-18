@@ -20,10 +20,10 @@ namespace ValidationPipeline.LogStorage.Controllers
 
         private readonly IArchiveService _archiveService;
         private readonly IStorageService _storageService;
-        private readonly IOptions<CdnOptions> _cdnOptions;
+        private readonly IOptionsSnapshot<CdnOptions> _cdnOptions;
 
         public LogsController(IArchiveService archiveService, IStorageService storageService,
-            IOptions<CdnOptions> cdnOptions)
+            IOptionsSnapshot<CdnOptions> cdnOptions)
         {
             _archiveService = archiveService;
             _storageService = storageService;

@@ -16,20 +16,29 @@ namespace ValidationPipeline.LogStorage.Services
     {
         private const string ContainerName = "validationpipeline";
 
+        private readonly IOptionsSnapshot<BlobStorageOptions> _options;
         private readonly CloudBlobContainer _blobContainer;
 
-        public StorageService(IOptions<BlobStorageOptions> options)
+        public StorageService(IOptionsSnapshot<BlobStorageOptions> options)
         {
+            _options = options;
+
             var storageAccount = CloudStorageAccount.Parse(options.Value.ConnectionString);
             var blobClient = storageAccount.CreateCloudBlobClient();
 
-            blobClient.DefaultRequestOptions = new BlobRequestOptions
-            {
-                ParallelOperationThreadCount = options.Value.ParallelOperationThreadCount
-            };
-
             _blobContainer = blobClient.GetContainerReference(ContainerName);
-            _blobContainer.CreateIfNotExistsAsync().Wait();
+
+            _blobContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, 
+                GetLatestRequestOptions(), new OperationContext()).Wait();
+        }
+
+        private BlobRequestOptions GetLatestRequestOptions()
+        {
+            return new BlobRequestOptions
+            {
+                SingleBlobUploadThresholdInBytes = _options.Value.SingleBlobUploadThresholdInBytes,
+                ParallelOperationThreadCount = _options.Value.ParallelOperationThreadCount
+            };
         }
 
         #region IStorageService Implementation
@@ -52,7 +61,10 @@ namespace ValidationPipeline.LogStorage.Services
                 entry => entry.Key, entry => JsonConvert.SerializeObject(entry.Value)));
 
             archiveStream.Position = 0;
-            await blockBlob.UploadFromStreamAsync(archiveStream);
+
+            await blockBlob.UploadFromStreamAsync(archiveStream, 
+                AccessCondition.GenerateEmptyCondition(),
+                GetLatestRequestOptions(), new OperationContext());
         }
 
         public async Task<bool> ExistsAsync(string archiveFileName)
@@ -61,7 +73,7 @@ namespace ValidationPipeline.LogStorage.Services
                 throw new ArgumentNullException(nameof(archiveFileName));
 
             var blob = _blobContainer.GetBlobReference(archiveFileName);
-            return await blob.ExistsAsync();
+            return await blob.ExistsAsync(GetLatestRequestOptions(), new OperationContext());
         }
 
         public async Task<IDictionary<string, MetaData>> GetMetaDataAsync(string archiveFileName)
@@ -70,7 +82,8 @@ namespace ValidationPipeline.LogStorage.Services
                 throw new ArgumentNullException(nameof(archiveFileName));
 
             var blob = _blobContainer.GetBlobReference(archiveFileName);
-            await blob.FetchAttributesAsync();
+            await blob.FetchAttributesAsync(AccessCondition.GenerateEmptyCondition(), 
+                GetLatestRequestOptions(), new OperationContext());
 
             return blob.Metadata.ToDictionary(entry => entry.Key,
                 entry => JsonConvert.DeserializeObject<MetaData>(entry.Value));
@@ -86,7 +99,8 @@ namespace ValidationPipeline.LogStorage.Services
                 throw new ArgumentNullException(nameof(innerFileName));
 
             var blob = _blobContainer.GetBlobReference(archiveFileName);
-            await blob.FetchAttributesAsync();
+            await blob.FetchAttributesAsync(AccessCondition.GenerateEmptyCondition(),
+                GetLatestRequestOptions(), new OperationContext());
 
             return blob.Metadata.ContainsKey(innerFileName) ? 
                 JsonConvert.DeserializeObject<MetaData>(blob.Metadata[innerFileName]) : null;
@@ -99,7 +113,9 @@ namespace ValidationPipeline.LogStorage.Services
 
             var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
             var memoryStream = new MemoryStream();
-            await blockBlob.DownloadToStreamAsync(memoryStream);
+
+            await blockBlob.DownloadToStreamAsync(memoryStream, AccessCondition.GenerateEmptyCondition(),
+                GetLatestRequestOptions(), new OperationContext());
 
             return memoryStream;
         }

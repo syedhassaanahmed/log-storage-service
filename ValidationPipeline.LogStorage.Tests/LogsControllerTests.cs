@@ -32,7 +32,7 @@ namespace ValidationPipeline.LogStorage.Tests
                 {
                     services
                         .AddTransient(serviceProvider => _mockArchiveService)
-                        .AddTransient(serviceProvider => _mockStorageService);
+                        .AddSingleton(serviceProvider => _mockStorageService);
                 });
 
             var server = new TestServer(webHostBuilder);

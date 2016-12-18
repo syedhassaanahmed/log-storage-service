@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 using Xunit;
@@ -19,10 +20,10 @@ namespace ValidationPipeline.LogStorage.Tests
 
         public StorageServiceTests()
         {
-            var options = Options.Create(new BlobStorageOptions
+            var options = Substitute.For<IOptionsSnapshot<BlobStorageOptions>>();
+            options.Value.Returns(new BlobStorageOptions
             {
-                ConnectionString = "UseDevelopmentStorage=true",
-                ParallelOperationThreadCount = 4
+                ConnectionString = "UseDevelopmentStorage=true"
             });
 
             _storageService = new StorageService(options);
