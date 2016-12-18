@@ -18,19 +18,14 @@ namespace ValidationPipeline.LogStorage.Services
         private const string ContainerName = "validationpipeline";
 
         private readonly IOptionsSnapshot<BlobStorageOptions> _options;
-        private readonly CloudBlobContainer _blobContainer;
+        private readonly CloudBlobClient _blobClient;
 
         public StorageService(IOptionsSnapshot<BlobStorageOptions> options)
         {
             _options = options;
 
             var storageAccount = CloudStorageAccount.Parse(options.Value.ConnectionString);
-            var blobClient = storageAccount.CreateCloudBlobClient();
-
-            _blobContainer = blobClient.GetContainerReference(ContainerName);
-
-            _blobContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, 
-                GetLatestRequestOptions(), new OperationContext()).Wait();
+            _blobClient = storageAccount.CreateCloudBlobClient();
         }
 
         #region IStorageService Implementation
@@ -47,7 +42,8 @@ namespace ValidationPipeline.LogStorage.Services
             if (metaData == null || !metaData.Any())
                 throw new ArgumentNullException(nameof(metaData));
 
-            var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
+            var blobContainer = await CreateContainerIfNotExistsAsync();
+            var blockBlob = blobContainer.GetBlockBlobReference(archiveFileName);
 
             blockBlob.Metadata.AddRange(metaData.ToDictionary(
                 entry => entry.Key, entry => JsonConvert.SerializeObject(entry.Value)));
@@ -65,7 +61,8 @@ namespace ValidationPipeline.LogStorage.Services
             if (string.IsNullOrWhiteSpace(archiveFileName))
                 throw new ArgumentNullException(nameof(archiveFileName));
 
-            var blob = _blobContainer.GetBlobReference(archiveFileName);
+            var blobContainer = await CreateContainerIfNotExistsAsync();
+            var blob = blobContainer.GetBlobReference(archiveFileName);
             return await blob.ExistsAsync(GetLatestRequestOptions(), new OperationContext());
         }
 
@@ -74,7 +71,8 @@ namespace ValidationPipeline.LogStorage.Services
             if(string.IsNullOrWhiteSpace(archiveFileName))
                 throw new ArgumentNullException(nameof(archiveFileName));
 
-            var blob = _blobContainer.GetBlobReference(archiveFileName);
+            var blobContainer = await CreateContainerIfNotExistsAsync();
+            var blob = blobContainer.GetBlobReference(archiveFileName);
             await FetchAttributesAsync(blob);
 
             return blob.Metadata.ToDictionary(entry => entry.Key,
@@ -90,7 +88,8 @@ namespace ValidationPipeline.LogStorage.Services
             if (string.IsNullOrWhiteSpace(innerFileName))
                 throw new ArgumentNullException(nameof(innerFileName));
 
-            var blob = _blobContainer.GetBlobReference(archiveFileName);
+            var blobContainer = await CreateContainerIfNotExistsAsync();
+            var blob = blobContainer.GetBlobReference(archiveFileName);
             await FetchAttributesAsync(blob);
 
             return blob.Metadata.ContainsKey(innerFileName) ? 
@@ -102,7 +101,8 @@ namespace ValidationPipeline.LogStorage.Services
             if (string.IsNullOrWhiteSpace(archiveFileName))
                 throw new ArgumentNullException(nameof(archiveFileName));
 
-            var blockBlob = _blobContainer.GetBlockBlobReference(archiveFileName);
+            var blobContainer = await CreateContainerIfNotExistsAsync();
+            var blockBlob = blobContainer.GetBlockBlobReference(archiveFileName);
             var memoryStream = new MemoryStream();
 
             await blockBlob.DownloadToStreamAsync(memoryStream, AccessCondition.GenerateEmptyCondition(),
@@ -117,6 +117,16 @@ namespace ValidationPipeline.LogStorage.Services
         #endregion
 
         #region Helpers
+
+        private async Task<CloudBlobContainer> CreateContainerIfNotExistsAsync()
+        {
+            var blobContainer = _blobClient.GetContainerReference(ContainerName);
+
+            await blobContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off,
+                GetLatestRequestOptions(), new OperationContext());
+
+            return blobContainer;
+        }
 
         private BlobRequestOptions GetLatestRequestOptions()
         {
