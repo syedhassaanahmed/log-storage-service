@@ -48,7 +48,7 @@ namespace ValidationPipeline.LogStorage
                 .Configure<CdnOptions>(Configuration.GetSection("Cdn"));
 
             services.TryAddTransient<IArchiveService, ArchiveService>();
-            services.TryAddSingleton<IStorageService, StorageService>();
+            services.TryAddTransient<IStorageService, StorageService>();
 
             services.TryAddTransient<IFileProvider, LogStorageFileProvider>();
         }
