@@ -53,11 +53,14 @@ namespace ValidationPipeline.LogStorage.Controllers
                 if (_archiveService.IsEmpty())
                     return BadRequest($"{archiveFileName} is empty!");
 
-                var metaData = _archiveService.GetMetaData().ToList();
+                var metaData = _archiveService.GetMetaData();
 
                 // Blob Storage Metadata Name only tolerates C# identifiers
                 // That's why we create our own name before passing it to StorageService
-                var metaDictionary = CreateMetaDictionary(metaData);
+                var metaDictionary = metaData.Select((value, index) => 
+                    new { Key = MetaDataKeyPrefix + index, Value = value })
+                    .ToDictionary(i => i.Key, i => i.Value);
+                
                 await _storageService.UploadAsync(archiveFileName, stream, metaDictionary);
 
                 var archiveResponse = CreateArchiveResponse(archiveFileName, metaDictionary);
@@ -105,18 +108,6 @@ namespace ValidationPipeline.LogStorage.Controllers
                 Url = $"{_cdnOptions.Value.EdgeUrl}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}",
                 Bytes = entry.Value.Length
             });
-        }
-
-        private static IDictionary<string, MetaData> CreateMetaDictionary(IList<MetaData> metaData)
-        {
-            var metaDictionary = new Dictionary<string, MetaData>();
-
-            for (var i = 0; i < metaData.Count; i++)
-            {
-                metaDictionary.Add(MetaDataKeyPrefix + i, metaData[i]);
-            }
-
-            return metaDictionary;
         }
 
         #endregion
