@@ -13,6 +13,7 @@ using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.Swagger.Model;
 using ValidationPipeline.LogStorage.FileProviders;
+using ValidationPipeline.LogStorage.Middlewares;
 using ValidationPipeline.LogStorage.Models;
 using ValidationPipeline.LogStorage.Services;
 
@@ -20,6 +21,9 @@ namespace ValidationPipeline.LogStorage
 {
     public class Startup
     {
+        private const string BlobStorageKey = "BlobStorage";
+        private const string CdnKey = "Cdn";
+        private const string BasicAuthenticationKey = "BasicAuthentication";
         private const string StaticFilesCacheMaxAgeKey = "StaticFiles:CacheMaxAgeSeconds";
         private const string ControllerCacheDurationKey = "Controller:CacheDurationMinutes";
 
@@ -47,8 +51,9 @@ namespace ValidationPipeline.LogStorage
                 });
 
             services.AddOptions()
-                .Configure<BlobStorageOptions>(Configuration.GetSection("BlobStorage"))
-                .Configure<CdnOptions>(Configuration.GetSection("Cdn"));
+                .Configure<BlobStorageOptions>(Configuration.GetSection(BlobStorageKey))
+                .Configure<CdnOptions>(Configuration.GetSection(CdnKey))
+                .Configure<BasicAuthenticationOptions>(Configuration.GetSection(BasicAuthenticationKey));
 
             services.TryAddTransient<IArchiveService, ArchiveService>();
             services.TryAddTransient<IStorageService, StorageService>();
@@ -66,8 +71,9 @@ namespace ValidationPipeline.LogStorage
             if (env.IsDevelopment())
                 app.UseDeveloperExceptionPage();
 
-            app.UseMvc()
+            app.UseBasicAuthentication()
                 .UseStaticFiles(GetStaticFileOptions(app))
+                .UseMvc()
                 .UseSwagger() // Enable middleware to serve generated Swagger as a JSON endpoint
                 .UseSwaggerUi(); // Enable middleware to serve swagger-ui assets (HTML, JS, CSS etc.)
         }
