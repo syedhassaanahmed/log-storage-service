@@ -18,6 +18,13 @@ var coverageOutput = coverageDir + "coverage.xml";
 var projectPath = "./ValidationPipeline.LogStorage";
 var projectJsonPath = projectPath + "/project.json";
 
+Task("StartStorageEmulator")
+	.Does(() => 
+	{
+		StartProcess(@"C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe",
+			new ProcessSettings{ Arguments = "start" });
+	});
+
 Task("Clean")
 	.Does(() => 
 	{
@@ -73,6 +80,7 @@ Task("Build")
 
 Task("TestWithCoverage")
 	.IsDependentOn("Build")
+	.IsDependentOn("StartStorageEmulator")
 	.Does(() => 
 	{
 		Action<ICakeContext> testAction = tool => 
