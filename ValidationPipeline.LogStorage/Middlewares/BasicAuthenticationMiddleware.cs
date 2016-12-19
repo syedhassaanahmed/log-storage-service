@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
@@ -27,7 +28,8 @@ namespace ValidationPipeline.LogStorage.Middlewares
 
         public async Task Invoke(HttpContext context)
         {
-            if (context.Request.Path.Value.Equals("/swagger/v1/swagger.json"))
+            if (_options.Value.ExcludePaths.Contains(context.Request.Path.Value, 
+                StringComparer.OrdinalIgnoreCase))
             {
                 await _next.Invoke(context);
                 return;
