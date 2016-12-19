@@ -139,8 +139,17 @@ namespace ValidationPipeline.LogStorage
                 Title = "Log Storage Service",
                 Description = "Simple REST API which ingests zipped log files, stores them and exposes unzipped content through API call",
                 TermsOfService = "None",
-                Contact = new Contact { Name = "Syed Hassaan Ahmed", Email = "hassaan.ahmed@notmyemail.com", Url = "https://github.com/syedhassaanahmed/log-storage-service" },
-                License = new License { Name = "Use under MIT", Url = "https://raw.githubusercontent.com/syedhassaanahmed/log-storage-service/develop/LICENSE" }
+                Contact = new Contact
+                {
+                    Name = "Syed Hassaan Ahmed",
+                    Email = "hassaan.ahmed@notmyemail.com",
+                    Url = "https://github.com/syedhassaanahmed/log-storage-service"
+                },
+                License = new License
+                {
+                    Name = "Use under MIT",
+                    Url = "https://raw.githubusercontent.com/syedhassaanahmed/log-storage-service/develop/LICENSE"
+                }
             };
         }
 
