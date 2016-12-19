@@ -71,6 +71,7 @@ namespace ValidationPipeline.LogStorage
             if (env.IsDevelopment())
                 app.UseDeveloperExceptionPage();
 
+            //Order is important here
             app.UseBasicAuthentication()
                 .UseStaticFiles(GetStaticFileOptions(app))
                 .UseMvc()

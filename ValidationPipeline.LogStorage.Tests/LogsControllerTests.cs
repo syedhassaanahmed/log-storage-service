@@ -194,6 +194,21 @@ namespace ValidationPipeline.LogStorage.Tests
         }
 
         [Fact]
+        public async Task GetMetaDataAsync_CorrectArchiveFileNameButNoMetaData_ReturnsInternalServerError()
+        {
+            // Arrange
+            _mockStorageService.ExistsAsync(Arg.Any<string>()).Returns(true);
+            _mockStorageService.GetMetaDataAsync(Arg.Any<string>())
+                .Returns(new Dictionary<string, MetaData>());
+
+            // Act
+            var response = await _client.GetAsync("/api/logs/file.zip");
+
+            // Assert
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        }
+
+        [Fact]
         public async Task GetMetaDataAsync_CorrectArchiveFileName_ReturnsOkWithLogFilesInfo()
         {
             // Arrange

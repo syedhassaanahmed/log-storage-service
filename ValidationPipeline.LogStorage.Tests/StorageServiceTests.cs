@@ -91,7 +91,7 @@ namespace ValidationPipeline.LogStorage.Tests
         {
             // Assert
             await Assert.ThrowsAsync<ArgumentNullException>(async () => // Act
-                await _storageService.GetMetaDataAsync(string.Empty));
+                await _storageService.ExistsAsync(string.Empty));
         }
 
         [Fact]
