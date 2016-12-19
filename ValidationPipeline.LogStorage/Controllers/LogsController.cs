@@ -12,6 +12,7 @@ using ValidationPipeline.LogStorage.Services;
 
 namespace ValidationPipeline.LogStorage.Controllers
 {
+    [Produces("application/json")]
     [ResponseCache(CacheProfileName = "Default")]
     [Route("api/[controller]")]
     public class LogsController : Controller
@@ -32,8 +33,22 @@ namespace ValidationPipeline.LogStorage.Controllers
 
         #region API Methods
 
+        /// <summary>
+        /// This method allows you to provide a new zip archive or update an existing one.
+        /// </summary>
+        /// <remarks>
+        /// Contents of request body should be binary stream of the file to be uploaded.
+        /// Content type is expected to be application/zip.
+        /// This method only supports files up to 60MB in size.
+        /// </remarks>
+        /// <param name="archiveFileName">File name of the archive</param>
+        /// <returns></returns>
+        /// <response code="201">Returns data about inner files from the newly uploaded archive</response>
+        /// <response code="400">If no content was provided</response>
+        /// <response code="415">If uploaded archive's content type is other than application/zip</response>
         [ResponseCache(CacheProfileName = "Never")]
         [HttpPut("{archiveFileName}")]
+        [ProducesResponseType(typeof(IEnumerable<ArchiveResponse>), 201)]
         public async Task<IActionResult> UploadAsync(string archiveFileName)
         {
             if (Request.ContentLength == null || Request.ContentLength.Value == 0)
@@ -68,7 +83,16 @@ namespace ValidationPipeline.LogStorage.Controllers
             }
         }
 
+        /// <summary>
+        /// This method allows you to retrieve data about inner files of a stored archive.
+        /// </summary>
+        /// <param name="archiveFileName">File name of the archive</param>
+        /// <returns></returns>
+        /// <response code="200">Returns data about inner files from the specified archive file name</response>
+        /// <response code="404">If no archive was found for the specified file name</response>
+        /// <response code="500">If specified archive is present but its metadata is corrupt</response>
         [HttpGet("{archiveFileName}")]
+        [ProducesResponseType(typeof(IEnumerable<ArchiveResponse>), 200)]
         public async Task<IActionResult> GetMetaDataAsync(string archiveFileName)
         {
             var exists = await _storageService.ExistsAsync(archiveFileName);

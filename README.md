@@ -13,6 +13,7 @@ An automated test framework is used to run tens of thousands of tests per week, 
 - Unit tests
 
 ## **Solution**
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://azuredeploy.net/)
 
 ### Setup Requirements:
 - Visual Studio 2015

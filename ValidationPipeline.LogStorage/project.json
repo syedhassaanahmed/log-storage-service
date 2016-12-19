@@ -1,6 +1,8 @@
 {
   "version": "1.0.0-*",
   "dependencies": {
+    "Swashbuckle": "6.0.0-beta902",
+
     "Microsoft.AspNetCore": "1.1.0",
     "Microsoft.AspNetCore.Diagnostics": "1.1.0",
     "Microsoft.AspNetCore.Mvc": "1.1.0",
@@ -25,7 +27,8 @@
   },
 
   "buildOptions": {
-    "emitEntryPoint": true
+    "emitEntryPoint": true,
+    "xmlDoc": true
   },
 
   "runtimeOptions": {
