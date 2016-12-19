@@ -47,6 +47,7 @@ namespace ValidationPipeline.LogStorage.Controllers
         /// <returns></returns>
         /// <response code="201">Returns data about inner files from the newly uploaded archive</response>
         /// <response code="400">If no content was provided</response>
+        /// <response code="401">If request is unauthorized</response>
         /// <response code="415">If uploaded archive's content type is other than application/zip</response>
         [ResponseCache(CacheProfileName = "Never")]
         [HttpPut("{archiveFileName}")]
@@ -91,6 +92,7 @@ namespace ValidationPipeline.LogStorage.Controllers
         /// <param name="archiveFileName">File name of the archive</param>
         /// <returns></returns>
         /// <response code="200">Returns data about inner files from the specified archive file name</response>
+        /// <response code="401">If request is unauthorized</response>
         /// <response code="404">If no archive was found for the specified file name</response>
         /// <response code="500">If specified archive is present but its metadata is corrupt</response>
         [HttpGet("{archiveFileName}")]
