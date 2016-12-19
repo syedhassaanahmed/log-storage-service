@@ -32,7 +32,7 @@ An automated test framework is used to run tens of thousands of tests per week, 
 - [Static Files Middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/static-files) is used for serving files inside zip archive. This way we get some functionality for free.
 - For each upload `MD5` hash is computed and stored inside Blob `Properties`. It gets verified for each download. On a **dual-core i7** CPU it takes **~150ms** to calculate hash on a **60MB** file. If raw performance is needed, this can be turned off.
 - Controllers are tested using `TestHost` so that authorization, routes and request headers can also be asserted.
-- Solution has naive implementation of security using `Basic Authentication` with hardcoded `Claims Authorization` (Test Credentials can be configured in App settings). 
+- Solution has naive implementation of security using `Basic Authentication` with hardcoded [Claims-Based Authorization](https://docs.microsoft.com/en-us/aspnet/core/security/authorization/claims) (Test Credentials can be configured in App settings). 
 
 ### Assumptions:
 - Re-uploading zip files with same name will override them.
