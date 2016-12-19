@@ -27,6 +27,12 @@ namespace ValidationPipeline.LogStorage.Middlewares
 
         public async Task Invoke(HttpContext context)
         {
+            if (context.Request.Path.Value.Equals("/swagger/v1/swagger.json"))
+            {
+                await _next.Invoke(context);
+                return;
+            }
+
             string authHeader = context.Request.Headers["Authorization"];
 
             if (authHeader != null && authHeader.StartsWith(BasicAuthenticationType))
