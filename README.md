@@ -30,7 +30,7 @@ An automated test framework is used to run tens of thousands of tests per week, 
 - Blob Storage request options (`SingleBlobUploadThresholdInBytes` and `ParallelOperationThreadCount`) can be configured in `appSettings.json` or Azure portal and do not require app restart in order to be changed.
 - Upload file size is handled on `IIS` level (`maxAllowedContentLength` is currently set to [60MB](https://docs.microsoft.com/en-us/azure/azure-subscription-service-limits#storage-limits) in `Web.config`)
 - [Static Files Middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/static-files) is used for serving files inside zip archive. This way we get some functionality for free.
-- For each upload `MD5` hash is computed and stored inside Blob `Properties`. It gets verified for each download. On a dual-core i7 CPU it takes ~150ms to calculate hash on a 60MB file. If raw performance is needed, this can be turned off.
+- For each upload `MD5` hash is computed and stored inside Blob `Properties`. It gets verified for each download. On a **dual-core i7** CPU it takes **~150ms** to calculate hash on a **60MB** file. If raw performance is needed, this can be turned off.
 - Controllers are tested using `TestHost` so that routes and request headers can also be asserted.
 
 ### Assumptions:
@@ -42,7 +42,7 @@ An automated test framework is used to run tens of thousands of tests per week, 
 - Multiple file uploads using `multipart/form-data` adds some flexibility for the API consumer however we must handle partial failures in that case.
 - Protect API by adding Authorization Middleware.
 - Resumable upload if test zip outputs are expected to be large.
-- `LZ4` for transferring zips: LZ4 is scalable with multi-cores CPU. [Benchmarks suggest](http://catchchallenger.first-world.info/wiki/Quick_Benchmark:_Gzip_vs_Bzip2_vs_LZMA_vs_XZ_vs_LZ4_vs_LZO) it offers fast compression/decompression at the expense of memory.
-- Blob `MetaData` has a size limit of 8K including both name and value. Consider alternatives if several inner files are expected inside the archive.
+- `LZ4` for transferring zips: `LZ4` is scalable with multi-cores CPU. [Benchmarks suggest](http://catchchallenger.first-world.info/wiki/Quick_Benchmark:_Gzip_vs_Bzip2_vs_LZMA_vs_XZ_vs_LZ4_vs_LZO) it offers fast compression/decompression at the expense of memory.
+- Blob `MetaData` has a size limit of **8K** including both name and value. Consider alternatives if several inner files are expected inside the archive.
 - Consider keeping fresh archives in `hot tier` while moving older ones to `cool tier`.
 - Monitoring and diagnostics using `ApplicationInsights`
