@@ -37,6 +37,9 @@ namespace ValidationPipeline.LogStorage.Tests
 
             var server = new TestServer(webHostBuilder);
             _client = server.CreateClient();
+
+            _client.DefaultRequestHeaders.Authorization = 
+                new AuthenticationHeaderValue("Basic", "Sm9uOlNub3c=");
         }
 
         #region UploadAsync

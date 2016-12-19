@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -15,6 +16,7 @@ namespace ValidationPipeline.LogStorage.Controllers
     [Produces("application/json")]
     [ResponseCache(CacheProfileName = "Default")]
     [Route("api/[controller]")]
+    [Authorize]
     public class LogsController : Controller
     {
         public const string MetaDataKeyPrefix = "file_";
