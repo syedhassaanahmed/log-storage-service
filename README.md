@@ -13,6 +13,9 @@ An automated test framework is used to run tens of thousands of tests per week, 
 - Unit tests
 
 ## **Solution**
+[![Build status](https://ci.appveyor.com/api/projects/status/h7mt1xy2hb8r7d1b?svg=true)](https://ci.appveyor.com/project/syedhassaanahmed/log-storage-service)
+[![Coverage Status](https://coveralls.io/repos/github/syedhassaanahmed/log-storage-service/badge.svg?branch=develop)](https://coveralls.io/github/syedhassaanahmed/log-storage-service?branch=develop)
+
 [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://azuredeploy.net/)
 
 ### Setup:
