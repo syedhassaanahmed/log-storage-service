@@ -39,7 +39,6 @@ An automated test framework is used to run tens of thousands of tests per week, 
 
 ### Assumptions:
 - Re-uploading zip files with same name will override them.
-- Zip archive has flat structure inside and no hierarchies.
 
 ### Future improvements:
 - Instead of directly putting in Blob storage, store archive on local disk first and let a `WebJob` upload them to Blob storage. Download Requests in the meantime can be served from disk.

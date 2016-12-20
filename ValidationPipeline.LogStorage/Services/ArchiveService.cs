@@ -36,7 +36,7 @@ namespace ValidationPipeline.LogStorage.Services
             if (_zipArchive == null)
                 throw new ArgumentException("Archive Service was not initialized!");
 
-            return _zipArchive.Entries.Count == 0;
+            return _zipArchive.Entries.Count(entry => !IsFolder(entry)) == 0;
         }
 
         public IEnumerable<MetaData> GetMetaData()
@@ -44,9 +44,9 @@ namespace ValidationPipeline.LogStorage.Services
             if (_zipArchive == null)
                 throw new ArgumentException("Archive Service was not initialized!");
 
-            return _zipArchive.Entries.Select(entry => new MetaData
+            return _zipArchive.Entries.Where(entry => !IsFolder(entry)).Select(entry => new MetaData
             {
-                Name = entry.Name,
+                Name = entry.FullName,
                 Length = entry.Length,
                 LastModified = entry.LastWriteTime
             });
@@ -61,6 +61,11 @@ namespace ValidationPipeline.LogStorage.Services
                 throw new ArgumentNullException(nameof(innerFileName));
 
             return _zipArchive.GetEntry(innerFileName)?.Open();
+        }
+
+        public static bool IsFolder(ZipArchiveEntry entry)
+        {
+            return entry.FullName.EndsWith("/");
         }
 
         public void Dispose()

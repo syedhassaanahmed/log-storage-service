@@ -156,6 +156,23 @@ namespace ValidationPipeline.LogStorage.Tests
             }
         }
 
+        [Fact]
+        public void IsEmpty_FileWithOnlyFoldersInside_ReturnsTrue()
+        {
+            // Arrange
+            using (var stream = File.Open($"{TestDataPath}/emptyfolder.zip",
+                FileMode.Open, FileAccess.Read))
+            {
+                _archiveService.Initialize(stream);
+
+                // Act
+                var isEmpty = _archiveService.IsEmpty();
+
+                // Assert
+                Assert.True(isEmpty);
+            }
+        }
+
         #endregion
 
         #region GetMetaData
@@ -205,6 +222,23 @@ namespace ValidationPipeline.LogStorage.Tests
         {
             // Arrange
             using (var stream = File.Open($"{TestDataPath}/20161215.zip", 
+                FileMode.Open, FileAccess.Read))
+            {
+                _archiveService.Initialize(stream);
+
+                // Act
+                var result = _archiveService.GetMetaData();
+
+                // Assert
+                Assert.Equal(3, result.Count());
+            }
+        }
+
+        [Fact]
+        public void GetMetaData_Nested_ReturnsMetaDataExcludingFolders()
+        {
+            // Arrange
+            using (var stream = File.Open($"{TestDataPath}/nested.zip",
                 FileMode.Open, FileAccess.Read))
             {
                 _archiveService.Initialize(stream);
