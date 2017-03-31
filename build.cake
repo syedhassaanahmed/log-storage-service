@@ -16,7 +16,6 @@ var coverageDir = "./coverageOutput/";
 var coverageOutput = coverageDir + "coverage.xml";
 
 var projectPath = "./ValidationPipeline.LogStorage";
-var projectJsonPath = projectPath + "/project.json";
 
 Task("StartStorageEmulator")
 	.Does(() => 
@@ -42,26 +41,9 @@ Task("Clean")
 Task("Restore")
 	.Does(() => DotNetCoreRestore());
 
-Task("Version")
-	.Does(() => 
-	{
-		GitVersion(new GitVersionSettings
-		{
-			UpdateAssemblyInfo = true,
-			OutputType = GitVersionOutput.BuildServer
-		});
-
-		var versionInfo = GitVersion(new GitVersionSettings{ OutputType = GitVersionOutput.Json });
-		var updatedProjectJson = System.IO.File.ReadAllText(projectJsonPath)
-			.Replace("1.0.0-*", versionInfo.NuGetVersion);
-			
-		System.IO.File.WriteAllText(projectJsonPath, updatedProjectJson);
-	});
-
 Task("Build")
 	.IsDependentOn("Clean")
 	.IsDependentOn("Restore")
-	.IsDependentOn("Version")
 	.Does(() => 
 	{
 		var projects = GetFiles("./**/*.xproj");

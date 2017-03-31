@@ -19,8 +19,7 @@ An automated test framework is used to run tens of thousands of tests per week, 
 [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://azuredeploy.net/)
 
 ### Setup:
-- Visual Studio 2015
-- [.NET Core 1.1 SDK](https://www.microsoft.com/net/download/core#/current)
+- Visual Studio 2017
 - [Azure Storage Emulator](https://docs.microsoft.com/en-us/azure/storage/storage-use-emulator) for local development and executing `StorageServiceTests`
 
 ### Design choices:
