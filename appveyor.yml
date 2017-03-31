@@ -4,12 +4,3 @@ environment:
 build_script:
   - ps: .\build.ps1 
 test: off
-deploy:
-- provider: Environment
-  name: ValidationPipeline-EUNorth-Sandbox
-  on:
-    branch: develop
-- provider: Environment
-  name: ValidationPipeline-EUWest-Sandbox
-  on:
-    branch: develop

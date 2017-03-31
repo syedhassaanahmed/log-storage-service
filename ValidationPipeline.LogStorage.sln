@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.10
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "ValidationPipeline.LogStorage", "ValidationPipeline.LogStorage\ValidationPipeline.LogStorage.xproj", "{1D68631E-0A85-40EC-AABC-5B797D42CD55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ValidationPipeline.LogStorage", "ValidationPipeline.LogStorage\ValidationPipeline.LogStorage.csproj", "{1D68631E-0A85-40EC-AABC-5B797D42CD55}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "ValidationPipeline.LogStorage.Tests", "ValidationPipeline.LogStorage.Tests\ValidationPipeline.LogStorage.Tests.xproj", "{E4DF6859-8FF4-4593-8C45-7217521C7CA9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ValidationPipeline.LogStorage.Tests", "ValidationPipeline.LogStorage.Tests\ValidationPipeline.LogStorage.Tests.csproj", "{E4DF6859-8FF4-4593-8C45-7217521C7CA9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
