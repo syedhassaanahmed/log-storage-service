@@ -2,5 +2,5 @@ environment:
   coveralls_repo_token:
     secure: XFHkIJuned1hZeQmHlzpbsnTfkEen9hxPHKju7l9Ga5bghJVmybVfhuXW4ZI8OCu
 build_script:
-  - ps: .\build.ps1 
+  - ps: .\build.ps1 -Verbosity Diagnostic
 test: off

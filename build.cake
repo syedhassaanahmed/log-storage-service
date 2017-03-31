@@ -1,6 +1,5 @@
 #addin Cake.Coveralls
 
-#tool "nuget:?package=GitVersion.CommandLine"
 #tool "nuget:?package=OpenCover"
 #tool "nuget:?package=ReportGenerator"
 #tool "nuget:?package=coveralls.io"
@@ -46,7 +45,7 @@ Task("Build")
 	.IsDependentOn("Restore")
 	.Does(() => 
 	{
-		var projects = GetFiles("./**/*.xproj");
+		var projects = GetFiles("./**/ValidationPipeline.*.csproj");
 
 		var settings = new DotNetCoreBuildSettings
 		{
@@ -67,7 +66,7 @@ Task("TestWithCoverage")
 	{
 		Action<ICakeContext> testAction = tool => 
 		{
-			tool.DotNetCoreTest("./ValidationPipeline.LogStorage.Tests", new DotNetCoreTestSettings 
+			tool.DotNetCoreTest("./ValidationPipeline.LogStorage.Tests/ValidationPipeline.LogStorage.Tests.csproj", new DotNetCoreTestSettings 
 			{
 				Framework = framework,
 				Configuration = configuration

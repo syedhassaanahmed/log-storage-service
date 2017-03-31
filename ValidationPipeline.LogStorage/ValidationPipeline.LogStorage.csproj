@@ -8,6 +8,7 @@
     <PackageId>ValidationPipeline.LogStorage</PackageId>
     <PackageTargetFallback>$(PackageTargetFallback);portable-net45+win8+wp8+wpa81</PackageTargetFallback>
     <RuntimeFrameworkVersion>1.1.1</RuntimeFrameworkVersion>
+    <DebugType>full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
