@@ -14,6 +14,7 @@ An automated test framework is used to run tens of thousands of tests per week, 
 
 ## **Solution**
 [![Build status](https://ci.appveyor.com/api/projects/status/h7mt1xy2hb8r7d1b?svg=true)](https://ci.appveyor.com/project/syedhassaanahmed/log-storage-service)
+[![Build Status](https://travis-ci.org/syedhassaanahmed/log-storage-service.svg?branch=develop)](https://travis-ci.org/syedhassaanahmed/log-storage-service)
 [![Coverage Status](https://coveralls.io/repos/github/syedhassaanahmed/log-storage-service/badge.svg?branch=develop)](https://coveralls.io/github/syedhassaanahmed/log-storage-service?branch=develop)
 
 [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://azuredeploy.net/)
@@ -21,6 +22,7 @@ An automated test framework is used to run tens of thousands of tests per week, 
 ### Setup:
 - Visual Studio 2017
 - [Azure Storage Emulator](https://docs.microsoft.com/en-us/azure/storage/storage-use-emulator) for local development and executing `StorageServiceTests`
+- NOTE: If debugging the app in a container, [Azurite](https://github.com/arafato/azurite) is used instead of `Azure Storage Emulator`. 
 
 ### Design choices:
 - `ASP.NET Core 1.1` was selected since its latest, greatest and [fastest ASP.NET](https://blogs.msdn.microsoft.com/webdev/2016/11/16/announcing-asp-net-core-1-1/) yet! 
