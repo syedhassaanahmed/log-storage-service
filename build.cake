@@ -1,4 +1,5 @@
 #addin Cake.Coveralls
+#addin Cake.Docker
 
 #tool "nuget:?package=OpenCover"
 #tool "nuget:?package=ReportGenerator"
@@ -8,13 +9,8 @@ var target = Argument("target", "Default");
 var configuration = Argument("configuration", "Release");
 var framework = Argument("framework", "netcoreapp1.1");
 
-var outputDir = "./buildOutput/";
-var artifactName = outputDir + "artifact.zip";
-
 var coverageDir = "./coverageOutput/";
 var coverageOutput = coverageDir + "coverage.xml";
-
-var projectPath = "./ValidationPipeline.LogStorage";
 
 Task("StartStorageEmulator")
 	.Does(() => 
@@ -26,42 +22,21 @@ Task("StartStorageEmulator")
 Task("Clean")
 	.Does(() => 
 	{
-		if (DirectoryExists(outputDir))
-			DeleteDirectory(outputDir, recursive:true);
-
-		CreateDirectory(outputDir);
-
 		if (DirectoryExists(coverageDir))
 			DeleteDirectory(coverageDir, recursive:true);
 
 		CreateDirectory(coverageDir);
+
+		DockerComposeRm(new DockerComposeRmSettings { Force = true });
 	});
 
 Task("Restore")
-	.Does(() => DotNetCoreRestore());
-
-Task("Build")
-	.IsDependentOn("Clean")
-	.IsDependentOn("Restore")
-	.Does(() => 
-	{
-		var projects = GetFiles("./**/ValidationPipeline.*.csproj");
-
-		var settings = new DotNetCoreBuildSettings
-		{
-			Framework = framework,
-			Configuration = configuration,
-		};
-
-		foreach (var project in projects)
-		{
-			DotNetCoreBuild(project.GetDirectory().FullPath, settings);
-		}
-	});
+	.Does(() => DotNetCoreRestore("ValidationPipeline.LogStorage.sln"));
 
 Task("TestWithCoverage")
-	.IsDependentOn("Build")
 	.IsDependentOn("StartStorageEmulator")
+	.IsDependentOn("Clean")
+	.IsDependentOn("Restore")
 	.Does(() => 
 	{
 		Action<ICakeContext> testAction = tool => 
@@ -89,34 +64,26 @@ Task("CoverallsUpload")
 	.IsDependentOn("TestWithCoverage")	
 	.Does(() => 
 	{
-		CoverallsIo(coverageOutput, new CoverallsIoSettings()
+		CoverallsIo(coverageOutput, new CoverallsIoSettings
 		{
 			RepoToken = EnvironmentVariable("coveralls_repo_token")
 		});
 	});
 
-Task("Publish")
+Task("Build")
 	.IsDependentOn("TestWithCoverage")
 	.Does(() => 
 	{
-		var settings = new DotNetCorePublishSettings
-		{
-			Configuration = configuration,
-			OutputDirectory = outputDir
-		};
-					
-		DotNetCorePublish(projectPath, settings);
-		Zip(outputDir, artifactName);
+		DockerComposeUp(new DockerComposeUpSettings { Files = new [] { "docker-compose.ci.build.yml" } });
+		DockerComposeBuild();
 	});
 
 Task("AppVeyorUpload")
 	.WithCriteria(() => BuildSystem.IsRunningOnAppVeyor)
-	.IsDependentOn("Publish")
+	.IsDependentOn("Build")
 	.Does(() => 
 	{
-		var files = GetFiles(artifactName);
-		foreach (var file in files)
-			AppVeyor.UploadArtifact(file.FullPath);
+		
 	});
 
 Task("Default")

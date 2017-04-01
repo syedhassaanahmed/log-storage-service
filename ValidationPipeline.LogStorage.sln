@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ValidationPipeline.LogStora
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ValidationPipeline.LogStorage.Tests", "ValidationPipeline.LogStorage.Tests\ValidationPipeline.LogStorage.Tests.csproj", "{E4DF6859-8FF4-4593-8C45-7217521C7CA9}"
 EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{117BBDBA-8AFD-43BD-936C-9F0ED853BCF3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{E4DF6859-8FF4-4593-8C45-7217521C7CA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E4DF6859-8FF4-4593-8C45-7217521C7CA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E4DF6859-8FF4-4593-8C45-7217521C7CA9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{117BBDBA-8AFD-43BD-936C-9F0ED853BCF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{117BBDBA-8AFD-43BD-936C-9F0ED853BCF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{117BBDBA-8AFD-43BD-936C-9F0ED853BCF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{117BBDBA-8AFD-43BD-936C-9F0ED853BCF3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -131,9 +131,15 @@ namespace ValidationPipeline.LogStorage.Controllers
         private IEnumerable<ArchiveResponse> CreateArchiveResponse(string archiveFileName,
             IDictionary<string, MetaData> metaDictionary)
         {
+            var protocol = Request.IsHttps ? "https" : "http";
+            var host = $"{protocol}://{Request.Host.Value}";
+            var edgeUrl = !string.IsNullOrWhiteSpace(_cdnOptions.Value.EdgeUrl)
+                ? _cdnOptions.Value.EdgeUrl
+                : host;
+
             return metaDictionary.Select(entry => new ArchiveResponse
             {
-                Url = $"{_cdnOptions.Value.EdgeUrl}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}",
+                Url = $"{edgeUrl}{CommonConstants.StaticFilesPath}/{archiveFileName}/{entry.Key}",
                 Bytes = entry.Value.Length
             });
         }
