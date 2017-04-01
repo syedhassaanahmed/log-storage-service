@@ -37,17 +37,8 @@ Task("Clean")
 Task("Restore")
 	.Does(() => DotNetCoreRestore("ValidationPipeline.LogStorage.sln"));
 
-Task("TestWithoutCoverage")
-	.WithCriteria(() => BuildSystem.IsRunningOnTravisCI)
-	.IsDependentOn("StartStorageEmulator")
-	.IsDependentOn("Clean")
-	.IsDependentOn("Restore")
-	.Does(() => 
-	{
-		DotNetCoreTest(testProj, testSettings);
-	});
-
 Task("TestWithCoverage")
+	.WithCriteria(() => !BuildSystem.IsRunningOnTravisCI)
 	.IsDependentOn("StartStorageEmulator")
 	.IsDependentOn("Clean")
 	.IsDependentOn("Restore")
