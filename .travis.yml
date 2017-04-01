@@ -1,0 +1,8 @@
+language: csharp
+dotnet: 1.0.1
+
+script:
+- ./build.sh --verbosity diagnostic
+  
+notifications:
+  email: false

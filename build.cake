@@ -5,14 +5,18 @@
 #tool "nuget:?package=ReportGenerator"
 #tool "nuget:?package=coveralls.io"
 
-var target = Argument("target", "Default");
-var configuration = Argument("configuration", "Release");
-var framework = Argument("framework", "netcoreapp1.1");
+var testProj = "./ValidationPipeline.LogStorage.Tests/ValidationPipeline.LogStorage.Tests.csproj";
+var testSettings = new DotNetCoreTestSettings 
+{
+	Framework = "netcoreapp1.1",
+	Configuration = "Release"
+};
 
 var coverageDir = "./coverageOutput/";
 var coverageOutput = coverageDir + "coverage.xml";
 
 Task("StartStorageEmulator")
+	.WithCriteria(() => !BuildSystem.IsRunningOnTravisCI)
 	.Does(() => 
 	{
 		StartProcess(@"C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe",
@@ -33,20 +37,23 @@ Task("Clean")
 Task("Restore")
 	.Does(() => DotNetCoreRestore("ValidationPipeline.LogStorage.sln"));
 
+Task("TestWithoutCoverage")
+	.WithCriteria(() => BuildSystem.IsRunningOnTravisCI)
+	.IsDependentOn("StartStorageEmulator")
+	.IsDependentOn("Clean")
+	.IsDependentOn("Restore")
+	.Does(() => 
+	{
+		DotNetCoreTest(testProj, testSettings);
+	});
+
 Task("TestWithCoverage")
 	.IsDependentOn("StartStorageEmulator")
 	.IsDependentOn("Clean")
 	.IsDependentOn("Restore")
 	.Does(() => 
 	{
-		Action<ICakeContext> testAction = tool => 
-		{
-			tool.DotNetCoreTest("./ValidationPipeline.LogStorage.Tests/ValidationPipeline.LogStorage.Tests.csproj", new DotNetCoreTestSettings 
-			{
-				Framework = framework,
-				Configuration = configuration
-			});
-		};
+		Action<ICakeContext> testAction = tool => tool.DotNetCoreTest(testProj, testSettings);
 
 		OpenCover(testAction, coverageOutput, new OpenCoverSettings 
 		{
@@ -71,15 +78,17 @@ Task("CoverallsUpload")
 	});
 
 Task("Build")
+	.WithCriteria(() => !BuildSystem.IsRunningOnAppVeyor)
 	.IsDependentOn("TestWithCoverage")
+	.IsDependentOn("TestWithoutCoverage")
 	.Does(() => 
 	{
 		DockerComposeUp(new DockerComposeUpSettings { Files = new [] { "docker-compose.ci.build.yml" } });
 		DockerComposeBuild();
 	});
 
-Task("AppVeyorUpload")
-	.WithCriteria(() => BuildSystem.IsRunningOnAppVeyor)
+Task("DockerPush")
+	.WithCriteria(() => BuildSystem.IsRunningOnTravisCI)
 	.IsDependentOn("Build")
 	.Does(() => 
 	{
@@ -87,7 +96,7 @@ Task("AppVeyorUpload")
 	});
 
 Task("Default")
-	.IsDependentOn("AppVeyorUpload")
+	.IsDependentOn("DockerPush")
 	.IsDependentOn("CoverallsUpload");
 
-RunTarget(target);
+RunTarget("Default");
