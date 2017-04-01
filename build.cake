@@ -71,7 +71,6 @@ Task("CoverallsUpload")
 Task("Build")
 	.WithCriteria(() => !BuildSystem.IsRunningOnAppVeyor)
 	.IsDependentOn("TestWithCoverage")
-	.IsDependentOn("TestWithoutCoverage")
 	.Does(() => 
 	{
 		DockerComposeUp(new DockerComposeUpSettings { Files = new [] { "docker-compose.ci.build.yml" } });
