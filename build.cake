@@ -29,7 +29,7 @@ Task("Clean")
 	.Does(() => 
 	{
 		if (DirectoryExists(coverageDir))
-			DeleteDirectory(coverageDir, recursive:true);
+			DeleteDirectory(coverageDir, recursive: true);
 
 		CreateDirectory(coverageDir);
 	});
@@ -73,12 +73,17 @@ Task("Build")
 	.IsDependentOn("TestWithCoverage")
 	.Does(() => 
 	{
-		DockerComposeUp(new DockerComposeUpSettings { Files = new [] { "docker-compose.ci.build.yml" } });
+		DockerComposeUp(new DockerComposeUpSettings 
+		{ 
+			Files = new [] { "docker-compose.ci.build.yml" } 
+		});
+		
 		DockerComposeBuild();
 	});
 
 Task("DockerPush")
 	.WithCriteria(() => BuildSystem.IsRunningOnTravisCI)
+	.WithCriteria(() => EnvironmentVariable("TRAVIS_BRANCH") == "develop")
 	.IsDependentOn("Build")
 	.Does(() => 
 	{
