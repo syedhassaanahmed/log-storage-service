@@ -30,8 +30,6 @@ Task("Clean")
 			DeleteDirectory(coverageDir, recursive:true);
 
 		CreateDirectory(coverageDir);
-
-		DockerComposeRm(new DockerComposeRmSettings { Force = true });
 	});
 
 Task("Restore")
