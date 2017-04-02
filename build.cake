@@ -15,6 +15,8 @@ var testSettings = new DotNetCoreTestSettings
 var coverageDir = "./coverageOutput/";
 var coverageOutput = coverageDir + "coverage.xml";
 
+var dockerRegistryServer = "logstorageservice.azurecr.io";
+
 Task("StartStorageEmulator")
 	.WithCriteria(() => !BuildSystem.IsRunningOnTravisCI)
 	.Does(() => 
@@ -80,7 +82,15 @@ Task("DockerPush")
 	.IsDependentOn("Build")
 	.Does(() => 
 	{
-		
+		DockerLogin(new DockerLoginSettings
+		{
+			Username = EnvironmentVariable("DOCKER_USERNAME"),
+			Password = EnvironmentVariable("DOCKER_PASSWORD")
+		}, dockerRegistryServer);
+
+		var imageName = dockerRegistryServer + "/dev";
+		DockerTag("validationpipeline.logstorage", imageName);
+		DockerPush(imageName);
 	});
 
 Task("Default")
