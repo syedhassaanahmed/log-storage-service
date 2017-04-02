@@ -60,8 +60,7 @@ namespace ValidationPipeline.LogStorage
 
             services.TryAddTransient<IFileProvider, LogStorageFileProvider>();
 
-            // TODO: Uncomment when it works inside container
-            //ConfigureSwagger(services);
+            ConfigureSwagger(services);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -75,10 +74,9 @@ namespace ValidationPipeline.LogStorage
             //Order is important here
             app.UseBasicAuthentication()
                 .UseStaticFiles(GetStaticFileOptions(app))
-                .UseMvc();
-                
-                //.UseSwagger() // Enable middleware to serve generated Swagger as a JSON endpoint
-                //.UseSwaggerUi(); // Enable middleware to serve swagger-ui assets (HTML, JS, CSS etc.)
+                .UseMvc()
+                .UseSwagger() // Enable middleware to serve generated Swagger as a JSON endpoint
+                .UseSwaggerUi(); // Enable middleware to serve swagger-ui assets (HTML, JS, CSS etc.)
         }
 
         #region Helpers
